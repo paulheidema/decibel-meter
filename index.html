@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b0f14">
+<title>Decibel Meter</title>
+<style>
+  :root {
+    --bg: #0b0f14; --card: #141b24; --line: #233041; --text: #e8eef5; --muted: #8a9bb0;
+    --green: #3ddc84; --yellow: #ffc940; --orange: #ff8a3d; --red: #ff4d5e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px); }
+  .wrap { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  h1 { font-size: 18px; font-weight: 600; margin: 0; color: var(--muted); letter-spacing: .5px; text-align: center; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+  .gauge { position: relative; }
+  .gauge svg { width: 100%; height: auto; display: block; }
+  .readout { position: absolute; left: 0; right: 0; bottom: 6%; text-align: center; }
+  .db { font-size: 64px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .unit { font-size: 18px; color: var(--muted); margin-left: 4px; }
+  .label { margin-top: 6px; font-size: 15px; color: var(--muted); min-height: 1.2em; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+  .stat .v { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  canvas { width: 100%; height: 110px; display: block; }
+  .row { display: flex; gap: 10px; }
+  button { flex: 1; font: inherit; font-size: 17px; font-weight: 600; border: 0; border-radius: 14px;
+    padding: 14px; color: #06210f; background: var(--green); cursor: pointer; }
+  button.secondary { background: #233041; color: var(--text); }
+  button.stop { background: var(--red); color: #fff; }
+  .calib { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
+  .calib input { flex: 1; accent-color: var(--green); }
+  .calib b { color: var(--text); font-variant-numeric: tabular-nums; min-width: 48px; text-align: right; }
+  .note { font-size: 12px; color: var(--muted); line-height: 1.45; }
+  .err { color: var(--red); font-size: 14px; display: none; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  td { padding: 4px 0; border-bottom: 1px solid var(--line); }
+  td:first-child { font-variant-numeric: tabular-nums; width: 70px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>DECIBEL METER</h1>
+
+  <div class="card gauge">
+    <svg viewBox="0 0 300 180" aria-hidden="true">
+      <defs>
+        <linearGradient id="g" x1="0" x2="1">
+          <stop offset="0" stop-color="#3ddc84"/><stop offset=".5" stop-color="#ffc940"/>
+          <stop offset=".75" stop-color="#ff8a3d"/><stop offset="1" stop-color="#ff4d5e"/>
+        </linearGradient>
+      </defs>
+      <path d="M30 160 A120 120 0 0 1 270 160" fill="none" stroke="#233041" stroke-width="18" stroke-linecap="round"/>
+      <path id="arc" d="M30 160 A120 120 0 0 1 270 160" fill="none" stroke="url(#g)" stroke-width="18"
+            stroke-linecap="round" pathLength="100" stroke-dasharray="0 100"/>
+      <line id="peak" x1="150" y1="28" x2="150" y2="52" stroke="#e8eef5" stroke-width="3" stroke-linecap="round" opacity="0"/>
+      <text x="22" y="178" fill="#8a9bb0" font-size="11">20</text>
+      <text x="268" y="178" fill="#8a9bb0" font-size="11">120</text>
+    </svg>
+    <div class="readout">
+      <div><span class="db" id="db">--</span><span class="unit">dB</span></div>
+      <div class="label" id="label">Tap Start to begin</div>
+    </div>
+  </div>
+
+  <div class="card stats">
+    <div class="stat"><div class="v" id="min">--</div><div class="k">Min</div></div>
+    <div class="stat"><div class="v" id="avg">--</div><div class="k">Avg</div></div>
+    <div class="stat"><div class="v" id="max">--</div><div class="k">Max</div></div>
+  </div>
+
+  <div class="card"><canvas id="hist"></canvas></div>
+
+  <div class="row">
+    <button id="start">Start</button>
+    <button id="reset" class="secondary">Reset</button>
+  </div>
+  <div class="err" id="err"></div>
+
+  <div class="card">
+    <div class="calib">
+      <span>Calibrate</span>
+      <input type="range" id="offset" min="60" max="130" step="1" value="100">
+      <b id="offv">+100</b>
+    </div>
+    <p class="note">Phone mics aren't lab instruments. Readings are an estimate (roughly ±5 dB). To improve accuracy,
+      compare with a known meter and slide Calibrate until they match. Your setting is saved on this device.</p>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>Typical sound levels</summary>
+      <table>
+        <tr><td>30 dB</td><td>Whisper, quiet bedroom</td></tr>
+        <tr><td>40 dB</td><td>Library, quiet office</td></tr>
+        <tr><td>60 dB</td><td>Normal conversation</td></tr>
+        <tr><td>70 dB</td><td>Busy restaurant, vacuum</td></tr>
+        <tr><td>85 dB</td><td>Heavy traffic — risk with long exposure</td></tr>
+        <tr><td>100 dB</td><td>Motorbike, loud concert</td></tr>
+        <tr><td>120 dB</td><td>Thunder, siren up close — pain threshold</td></tr>
+      </table>
+    </details>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const MIN_DB = 20, MAX_DB = 120, HIST_SECONDS = 60;
+  let ctx, analyser, stream, buf, raf, running = false;
+  let smooth = null, min = Infinity, max = -Infinity, sum = 0, count = 0, peakHold = null, peakTime = 0;
+  const history = [];
+  let lastHist = 0;
+
+  let offset = 100;
+  try { const s = localStorage.getItem("dbOffset"); if (s) offset = +s; } catch (e) {}
+  $("offset").value = offset; $("offv").textContent = "+" + offset;
+  $("offset").addEventListener("input", e => {
+    offset = +e.target.value; $("offv").textContent = "+" + offset;
+    try { localStorage.setItem("dbOffset", offset); } catch (e) {}
+  });
+
+  const levelLabel = d =>
+    d < 30 ? "Very quiet" : d < 45 ? "Quiet" : d < 60 ? "Moderate" : d < 70 ? "Conversation" :
+    d < 85 ? "Loud" : d < 100 ? "Very loud — limit exposure" : "Dangerous";
+  const color = d => d < 60 ? "#3ddc84" : d < 85 ? "#ffc940" : d < 100 ? "#ff8a3d" : "#ff4d5e";
+  const pct = d => Math.max(0, Math.min(100, (d - MIN_DB) / (MAX_DB - MIN_DB) * 100));
+
+  function setPeakMarker(d) {
+    const a = Math.PI * (1 - pct(d) / 100), r1 = 98, r2 = 142, cx = 150, cy = 160;
+    const p = $("peak");
+    p.setAttribute("x1", cx + r1 * Math.cos(a)); p.setAttribute("y1", cy - r1 * Math.sin(a));
+    p.setAttribute("x2", cx + r2 * Math.cos(a)); p.setAttribute("y2", cy - r2 * Math.sin(a));
+    p.setAttribute("opacity", 1);
+  }
+
+  function drawHistory() {
+    const c = $("hist"), dpr = window.devicePixelRatio || 1;
+    const w = c.clientWidth, h = c.clientHeight;
+    if (c.width !== w * dpr) { c.width = w * dpr; c.height = h * dpr; }
+    const g = c.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    g.strokeStyle = "#233041"; g.fillStyle = "#8a9bb0"; g.font = "10px -apple-system, sans-serif";
+    for (const lv of [40, 60, 85, 100]) {
+      const y = h - (lv - MIN_DB) / (MAX_DB - MIN_DB) * h;
+      g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); g.fillText(lv, 2, y - 2);
+    }
+    if (history.length < 2) return;
+    const n = HIST_SECONDS * 10, step = w / (n - 1), start = n - history.length;
+    for (let i = 1; i < history.length; i++) {
+      const x0 = (start + i - 1) * step, x1 = (start + i) * step;
+      const y0 = h - pct(history[i - 1]) / 100 * h, y1 = h - pct(history[i]) / 100 * h;
+      g.strokeStyle = color(history[i]); g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    }
+  }
+
+  function tick(t) {
+    analyser.getFloatTimeDomainData(buf);
+    let s = 0;
+    for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+    const rms = Math.sqrt(s / buf.length);
+    const dbfs = 20 * Math.log10(Math.max(rms, 1e-8));
+    const d = Math.max(0, dbfs + offset);
+
+    smooth = smooth === null ? d : smooth * 0.85 + d * 0.15;   // ~fast response
+    const shown = Math.round(smooth);
+
+    if (count > 5) { min = Math.min(min, smooth); max = Math.max(max, smooth); }
+    // average in the energy domain (proper dB averaging)
+    sum += Math.pow(10, smooth / 10); count++;
+
+    if (peakHold === null || smooth > peakHold || t - peakTime > 2000) { peakHold = smooth; peakTime = t; }
+
+    $("db").textContent = shown;
+    $("db").style.color = color(smooth);
+    $("label").textContent = levelLabel(smooth);
+    $("arc").setAttribute("stroke-dasharray", pct(smooth) + " 100");
+    setPeakMarker(peakHold);
+    if (isFinite(min)) {
+      $("min").textContent = Math.round(min);
+      $("max").textContent = Math.round(max);
+      $("avg").textContent = Math.round(10 * Math.log10(sum / count));
+    }
+    if (t - lastHist > 100) {
+      history.push(smooth); lastHist = t;
+      if (history.length > HIST_SECONDS * 10) history.shift();
+      drawHistory();
+    }
+    raf = requestAnimationFrame(tick);
+  }
+
+  async function start() {
+    $("err").style.display = "none";
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      });
+    } catch (e) {
+      $("err").textContent = "Microphone access was blocked. Allow the mic for this site in your browser settings, then try again. (" + e.name + ")";
+      $("err").style.display = "block";
+      return;
+    }
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.resume();
+    const src = ctx.createMediaStreamSource(stream);
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    buf = new Float32Array(analyser.fftSize);
+    src.connect(analyser);
+    running = true;
+    $("start").textContent = "Stop"; $("start").className = "stop";
+    raf = requestAnimationFrame(tick);
+  }
+
+  function stop() {
+    running = false;
+    cancelAnimationFrame(raf);
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    if (ctx) ctx.close();
+    $("start").textContent = "Start"; $("start").className = "";
+    $("label").textContent = "Paused";
+  }
+
+  function reset() {
+    min = Infinity; max = -Infinity; sum = 0; count = 0; history.length = 0; peakHold = null;
+    ["min", "avg", "max"].forEach(id => $(id).textContent = "--");
+    drawHistory();
+  }
+
+  $("start").addEventListener("click", () => running ? stop() : start());
+  $("reset").addEventListener("click", reset);
+  window.addEventListener("resize", drawHistory);
+  drawHistory();
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    $("err").textContent = "This browser can't access the microphone here. Open the page over https (e.g. a hosted link) in Safari or Chrome.";
+    $("err").style.display = "block";
+  }
+})();
+</script>
+</body>
+</html>
