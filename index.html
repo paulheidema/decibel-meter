@@ -125,8 +125,12 @@ const VZ = [
   { k: "SPEAKING WELL", sub: "Everyone can hear you clearly",   c: "#3ddc84" },
   { k: "TOO LOUD",      sub: "That's shouting, ease off",       c: "#ff3b4e" },
 ];
-const vEdges = () => [S.qlo, S.qhi];
-const vZone = d => d == null ? -1 : d < S.qlo ? 0 : d <= S.qhi ? 1 : 2;
+// In Game mode the "speaking well" window narrows each level: +5 dB at the bottom on even levels, -5 dB at the top on odd levels
+const levelEdges = lv => { let lo = S.qlo, hi = S.qhi;
+  for (let k = 1; k < lv; k++) { if (hi - lo - 5 < 10) break; if (k % 2) lo += 5; else hi -= 5; }   // never narrower than 10 dB
+  return [lo, hi]; };
+const vEdges = () => S.mode === "game" && typeof game !== "undefined" ? levelEdges(game.level) : [S.qlo, S.qhi];
+const vZone = d => { if (d == null) return -1; const [lo, hi] = vEdges(); return d < lo ? 0 : d <= hi ? 1 : 2; };
 function zoneStrip(g, sx, sy, sw, sh, z, labSize, labGap) {
   const [q, l] = vEdges(), bounds = [q - 12, q, l, l + 12], wt = [1, 3, 1], xs = [sx];
   for (let i = 0; i < 3; i++) xs.push(xs[i] + sw * wt[i] / 5);
@@ -151,7 +155,7 @@ const S = {
   db: null, raw: null, peak: null, peakT: 0, min: null, max: null, leq: null, eSum: 0, eN: 0,
   hist: [], bands: new Float32Array(NB), wave: new Float32Array(256),
   running: false, t0: 0, elapsed: 0, offset: store.get("offset", 100), resp: store.get("resp", "fast"),
-  mode: store.get("mode", "meter"), qlo: store.get("qlo", 30), qhi: store.get("qhi", 55), voice: null
+  mode: store.get("mode", "meter"), qlo: store.get("qlo", 30), qhi: store.get("qhi", 60), voice: null
 };
 const demo = /[?&]demo/.test(location.search);
 
@@ -858,7 +862,7 @@ const game = {
   },
   pop(x, y, txt, c) { this.parts.push({ k: "txt", x, y, txt, c, t: 0 }); },
   burst(x, y, c, n = 10) { for (let i = 0; i < n; i++) this.parts.push({ k: "dot", x, y, vx: (Math.random() - .5) * 320, vy: Math.random() * 300 + 80, c, t: 0 }); },
-  say(msg, c) { this.flash = { msg, c }; this.flashT = 1.6; },
+  say(msg, c, sub) { this.flash = { msg, c, sub }; this.flashT = sub ? 2.6 : 1.6; },
   addScore(n, x, y, c = "#fff") { this.score += n; this.pop(x, y, (n > 0 ? "+" : "") + n, c);
     if (this.score > this.best) { this.best = this.score; store.set("best", this.best); } },
   spawn() {
@@ -898,7 +902,7 @@ const game = {
       if (!e.alive) continue;
       const dx = e.x + (e.w || 0) / 2 - hx;
       if (e.t === "coin") { if (Math.abs(e.x - hx) < 26 && Math.abs(e.y - (this.hy + 24)) < 34) { e.alive = false; this.coins++; this.addScore(10 * this.mult, e.x, e.y + 20, "#ffd23f"); } continue; }
-      if (e.t === "flag") { if (e.x < hx) { e.alive = false; this.level++; this.addScore(100, e.x, 150, "#3ddc84"); this.say("LEVEL " + this.level + "!", "#3ddc84"); this.nextFlag += 2600; } continue; }
+      if (e.t === "flag") { if (e.x < hx) { e.alive = false; this.level++; this.addScore(100, e.x, 150, "#3ddc84"); const [lo, hi] = levelEdges(this.level); this.say("LEVEL " + this.level + "!", "#3ddc84", lo + "–" + hi + " dB · narrower!"); this.nextFlag += 2800; } continue; }
       const overlap = Math.abs(dx) < (e.w / 2 + 16);
       if (overlap && this.st !== "fall") {
         if (e.t === "slime" && this.vy < 0 && this.hy > e.h * 0.35) {
@@ -1048,11 +1052,15 @@ const game = {
     // big centre flash
     if (this.flashT > 0 && this.flash) { const a = clamp(this.flashT / 0.4, 0, 1), sc = 1 + (1.6 - this.flashT) * 0.15;
       g.save(); g.globalAlpha = a; g.translate(W / 2, top + H2 * 0.38); g.scale(sc, sc);
-      g.font = "900 40px -apple-system, Inter, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.lineWidth = 7; g.strokeStyle = "#000";
-      g.strokeText(this.flash.msg, 0, 0); g.fillStyle = this.flash.c; g.fillText(this.flash.msg, 0, 0); g.restore(); }
+      const fpx = fitFont(g, this.flash.msg, 900, 44, W - 50); g.font = `900 ${fpx}px -apple-system, Inter, sans-serif`;
+      g.textAlign = "center"; g.textBaseline = "middle"; g.lineWidth = 7; g.strokeStyle = "#000";
+      g.strokeText(this.flash.msg, 0, 0); g.fillStyle = this.flash.c; g.fillText(this.flash.msg, 0, 0);
+      if (this.flash.sub) { const spx = fitFont(g, this.flash.sub, 900, 24, W - 60); g.font = `900 ${spx}px -apple-system, Inter, sans-serif`;
+        g.lineWidth = 5; g.strokeText(this.flash.sub, 0, fpx * 0.95); g.fillStyle = "#fff"; g.fillText(this.flash.sub, 0, fpx * 0.95); }
+      g.restore(); }
     // title card
     if (!S.running) {
-      const cw = Math.min(W - 40, 380), ch = 300, cx = (W - cw) / 2, cy = top + 172;
+      const cw = Math.min(W - 40, 380), ch = 320, cx = (W - cw) / 2, cy = top + 172;
       g.fillStyle = "rgba(10,10,20,.88)"; rrect(g, cx, cy, cw, ch, 24); g.fill(); g.strokeStyle = "#ffd23f"; g.lineWidth = 4; g.stroke();
       text(g, "PIP'S VOICE QUEST", W / 2, cy + 38, `900 ${fitFont(g, "PIP'S VOICE QUEST", 900, 30, cw - 30)}px -apple-system, Inter, sans-serif`, "#ffd23f");
       text(g, "Tap START, then talk to make Pip run!", W / 2, cy + 72, `700 ${fitFont(g, "Tap START, then talk to make Pip run!", 700, 16, cw - 30)}px -apple-system, Inter, sans-serif`, "#fff");
@@ -1060,7 +1068,8 @@ const game = {
         const yy = cy + 112 + i * 52; g.fillStyle = c; rrect(g, cx + 22, yy - 16, 32, 32, 9); g.fill();
         text(g, a, cx + 68, yy - 8, "800 16px -apple-system, Inter, sans-serif", c, "left");
         text(g, b, cx + 68, yy + 11, "600 14px -apple-system, Inter, sans-serif", "#fff", "left"); });
-      text(g, "BEST SCORE: " + this.best, W / 2, cy + ch - 26, "800 15px -apple-system, Inter, sans-serif", "#cfd6de");
+      const [l0, h0] = levelEdges(this.level); text(g, "Level " + this.level + " target: " + l0 + "–" + h0 + " dB (gets narrower each level)", W / 2, cy + ch - 46, `700 ${fitFont(g, "Level 1 target: 30–60 dB (gets narrower each level)", 700, 13, cw - 30)}px -apple-system, Inter, sans-serif`, "#3ddc84");
+      text(g, "BEST SCORE: " + this.best, W / 2, cy + ch - 22, "800 15px -apple-system, Inter, sans-serif", "#cfd6de");
     }
   }
 };
@@ -1107,6 +1116,7 @@ $("qhi").oninput = e => { S.qhi = Math.max(+e.target.value, S.qlo + 5); store.se
 syncQ();
 if (/[?&]voice/.test(location.search)) setMode("voice");
 if (/[?&]game/.test(location.search)) setMode("game");
+if (demo) { const m = location.search.match(/level=(\d+)/); if (m) { game.level = +m[1]; const [lo, hi] = levelEdges(game.level); game.say("LEVEL " + game.level + "!", "#3ddc84", lo + "–" + hi + " dB · narrower!"); } }
 $("resp").onclick = e => e.target.dataset.v && setResp(e.target.dataset.v); setResp(S.resp);
 document.addEventListener("visibilitychange", async () => { if (!document.hidden && S.running) { try { wakeLock = await navigator.wakeLock?.request("screen"); } catch (e) {} } });
 if (store.get("seenHint", false)) $("hint").style.opacity = 0; else { store.set("seenHint", true); setTimeout(() => $("hint").style.opacity = 0, 5000); }
