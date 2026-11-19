@@ -60,7 +60,12 @@
   .themes button.on { border-color:#fff; }
   #err { position:fixed; left:20px; right:20px; top:40%; z-index:6; padding:16px; border-radius:14px; display:none;
     background:rgba(200,30,40,.92); color:#fff; font:15px -apple-system, sans-serif; text-align:center; }
-  #hint { position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom) + 84px); text-align:center; z-index:2;
+  #mode { position:fixed; left:50%; transform:translateX(-50%); z-index:3; display:flex; padding:3px; border-radius:20px;
+    bottom:calc(env(safe-area-inset-bottom) + 84px); background:rgba(10,10,12,.82); border:1.5px solid rgba(255,255,255,.25);
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); font:700 13px -apple-system, Inter, sans-serif; }
+  #mode button { border:0; background:none; color:#bbb; padding:7px 14px; border-radius:16px; cursor:pointer; font:inherit; letter-spacing:.5px; }
+  #mode button.on { background:#fff; color:#000; }
+  #hint { position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom) + 128px); text-align:center; z-index:2;
     font:12px -apple-system, sans-serif; color:var(--fg); opacity:.5; letter-spacing:1px; transition:opacity 1s; pointer-events:none; }
 </style>
 </head>
@@ -74,6 +79,7 @@
 </header>
 
 <div id="hint">SWIPE TO CHANGE THEME</div>
+<div id="mode"><button data-v="meter">dB Meter</button><button data-v="voice">Voice Coach</button></div>
 
 <footer id="bot">
   <button class="icon" id="gear" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
@@ -85,10 +91,12 @@
   <h3>Settings <button id="close">Done</button></h3>
   <div class="row"><label>Theme</label></div>
   <div class="themes" id="themeGrid"></div>
+  <div class="row"><label>Mode</label><div class="seg" id="mode2"><button data-v="meter">dB Meter</button><button data-v="voice">Voice Coach</button></div></div>
+  <div class="row"><label>Phone is</label><div class="seg" id="dist"><button data-v="near">Near speaker</button><button data-v="far">Across room</button></div></div>
   <div class="row"><label>Calibration</label><input type="range" id="offset" min="60" max="130" step="1"><b id="offv"></b></div>
   <div class="row"><label>Response</label><div class="seg" id="resp"><button data-v="fast">Fast</button><button data-v="slow">Slow</button></div></div>
   <p class="note">Fast (125 ms) follows quick sounds like claps; Slow (1 s) gives a steadier reading. Phone mics are estimates
-    (about ±5 dB). Compare with a known meter and move Calibration until they match. Settings are saved on this phone.</p>
+    (about ±5 dB). Voice Coach: choose "Near speaker" when the phone is about an arm's length away, or "Across room" when it sits where the listeners are. Compare with a known meter and move Calibration until they match. Settings are saved on this phone.</p>
 </div>
 
 <div id="err"></div>
@@ -107,8 +115,18 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 };
-const status = d => d == null ? "STANDBY" : d < 35 ? "VERY QUIET" : d < 50 ? "QUIET" : d < 65 ? "MODERATE" :
+const status = d => S.mode === "voice" ? (S.voice == null ? "LISTENING" : VZ[vZone(S.voice)].k) : d == null ? "STANDBY" : d < 35 ? "VERY QUIET" : d < 50 ? "QUIET" : d < 65 ? "MODERATE" :
   d < 75 ? "CONVERSATION" : d < 85 ? "LOUD" : d < 100 ? "VERY LOUD" : "DANGEROUS";
+// Voice Coach zones (dB at about 1 m from the speaker; "across room" shifts down 10 dB)
+const VZ = [
+  { k: "TOO QUIET",        sub: "People can't hear you",          c: "#5b8cff" },
+  { k: "A BIT QUIET",      sub: "Speak up a little",              c: "#ffc940" },
+  { k: "GOOD",             sub: "People near you can hear",       c: "#3ddc84" },
+  { k: "BACK OF THE ROOM", sub: "Everyone can hear you clearly",  c: "#00e0a0" },
+  { k: "TOO LOUD",         sub: "That's shouting, ease off",      c: "#ff3b4e" },
+];
+const vEdges = () => { const o = S.dist === "far" ? -10 : 0; return [50 + o, 58 + o, 66 + o, 80 + o]; };
+const vZone = d => { if (d == null) return -1; const e = vEdges(); let i = 0; while (i < 4 && d >= e[i]) i++; return i; };
 const levelColor = d => d == null ? "#666" : d < 60 ? "#3ddc84" : d < 75 ? "#c6e34a" : d < 85 ? "#ffc940" : d < 100 ? "#ff8a3d" : "#ff3b4e";
 // seeded random for stable decorations
 let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
@@ -118,7 +136,8 @@ const NB = 48, HIST = 600;               // spectrum bands, history samples (30 
 const S = {
   db: null, raw: null, peak: null, peakT: 0, min: null, max: null, leq: null, eSum: 0, eN: 0,
   hist: [], bands: new Float32Array(NB), wave: new Float32Array(256),
-  running: false, t0: 0, elapsed: 0, offset: store.get("offset", 100), resp: store.get("resp", "fast")
+  running: false, t0: 0, elapsed: 0, offset: store.get("offset", 100), resp: store.get("resp", "fast"),
+  mode: store.get("mode", "meter"), dist: store.get("dist", "near"), voice: null
 };
 const demo = /[?&]demo/.test(location.search);
 
@@ -162,13 +181,13 @@ function stop() {
   $("go").textContent = "Start"; $("go").classList.remove("live");
 }
 function reset() {
-  Object.assign(S, { peak: null, min: null, max: null, leq: null, eSum: 0, eN: 0, elapsed: 0, t0: performance.now() });
+  vbuf.length = 0; Object.assign(S, { voice: null, peak: null, min: null, max: null, leq: null, eSum: 0, eN: 0, elapsed: 0, t0: performance.now() });
   S.hist.length = 0;
   themes.forEach(th => th.reset && th.reset());
 }
 function showErr(m) { const e = $("err"); e.textContent = m; e.style.display = "block"; setTimeout(() => e.style.display = "none", 6000); }
 
-let lastHist = 0;
+let lastHist = 0; const vbuf = [];
 function sample(now, dt) {
   if (!S.running) { // settle visuals when stopped
     for (let i = 0; i < NB; i++) S.bands[i] *= 0.9;
@@ -208,6 +227,9 @@ function sample(now, dt) {
   if (S.peak == null || S.db > S.peak || now - S.peakT > 2500) { S.peak = S.db; S.peakT = now; }
   S.eSum += Math.pow(10, S.db / 10) * dt; S.eN += dt;
   S.leq = 10 * Math.log10(S.eSum / S.eN);
+  vbuf.push([now, S.db]); while (vbuf.length && now - vbuf[0][0] > 1500) vbuf.shift();
+  const vmax = Math.max(...vbuf.map(x => x[1]));
+  S.voice = S.voice == null ? vmax : S.voice + (vmax - S.voice) * Math.min(1, dt * 4);
   if (now - lastHist > 50) { S.hist.push(S.db); lastHist = now; if (S.hist.length > HIST) S.hist.shift(); }
 }
 
@@ -310,9 +332,10 @@ const themes = [
     const col = S.db == null ? "#fff" : `rgb(${segCol(S.db).join(",")})`;
     text(g, fmt(S.db, 1), px + 22, py + ph / 2 + 4, `700 ${Math.min(96, pw * 0.27)}px Rajdhani`, "#ffffff", "left");
     text(g, "dB", px + pw - 22, py + 40, "700 26px Rajdhani", "#cfd6de", "right");
-    g.fillStyle = col; rrect(g, px + pw - 22 - 120, py + ph - 44, 120, 30, 15); g.fill();
-    g.fillStyle = "rgba(0,0,0,.55)"; rrect(g, px + pw - 22 - 118, py + ph - 42, 116, 26, 13); g.fill();
-    text(g, status(S.db), px + pw - 22 - 60, py + ph - 28, "700 13px Rajdhani", "#ffffff");
+    g.font = "700 13px Rajdhani"; const tw = Math.max(110, g.measureText(status(S.db)).width + 30);
+    g.fillStyle = col; rrect(g, px + pw - 22 - tw, py + ph - 44, tw, 30, 15); g.fill();
+    g.fillStyle = "rgba(0,0,0,.6)"; rrect(g, px + pw - 22 - tw + 2, py + ph - 42, tw - 4, 26, 13); g.fill();
+    text(g, status(S.db), px + pw - 22 - tw / 2, py + ph - 28, "700 13px Rajdhani", "#ffffff");
     // ladder
     const N = 25, top = py + ph + 22, bottom = r.y + r.h - 96, H = bottom - top, gap = 4, sh = (H - gap * (N - 1)) / N;
     const lx = px + 54, lw = pw - 54 - 112;
@@ -355,7 +378,7 @@ const themes = [
     bg.addColorStop(0, "#04303d"); bg.addColorStop(1, "#000308"); g.fillStyle = bg; g.fillRect(0, 0, w, h);
     this.stars.forEach(([x, y, s, p]) => { g.fillStyle = `rgba(160,240,255,${0.25 + 0.5 * Math.abs(Math.sin(t + p * 9))})`;
       g.fillRect(((x * w + t * 4 * s) % w), y * h, s, s); });
-    const cx = w / 2, R = Math.min(r.w * 0.3, r.h * 0.22), cy = r.y + R * 1.75;
+    const cx = w / 2, R = Math.max(60, Math.min(r.w * 0.3, r.h * 0.22, (r.h - 140) / 3.75)), cy = r.y + R * 1.75;
     // circular spectrum (mirrored)
     g.lineCap = "round";
     for (let i = 0; i < NB * 2; i++) {
@@ -788,8 +811,29 @@ function setTheme(i) {
   document.querySelector('meta[name=theme-color]').content = themes[cur].name === "Pure" || themes[cur].name === "Seismograph" ? "#f2ecda" : "#000";
 }
 function layoutRect() {
-  const tb = $("top").getBoundingClientRect().bottom, bb = $("bot").getBoundingClientRect().top;
+  const tb = $("top").getBoundingClientRect().bottom, bb = $("mode").getBoundingClientRect().top - (S.mode === "voice" ? 142 : 0);
   return { x: 0, y: tb + 6, w: W, h: Math.max(200, bb - tb - 12) };
+}
+function drawVoice(g, W, H) {
+  const bb = $("mode").getBoundingClientRect().top, ph = 132, pw = Math.min(W - 24, 460), x = (W - pw) / 2, y = bb - ph - 10;
+  const z = vZone(S.voice), Z = z < 0 ? { k: S.running ? "LISTENING…" : "TAP START", sub: "Then speak normally", c: "#9aa3ad" } : VZ[z];
+  g.save();
+  g.fillStyle = "rgba(8,8,10,.9)"; rrect(g, x, y, pw, ph, 20); g.fill();
+  g.strokeStyle = Z.c; g.lineWidth = 3; glow(g, Z.c, 18); g.stroke(); noGlow(g);
+  text(g, Z.k, x + pw / 2, y + 28, "800 26px -apple-system, Inter, sans-serif", Z.c);
+  text(g, Z.sub, x + pw / 2, y + 56, "600 16px -apple-system, Inter, sans-serif", "#ffffff");
+  // zone strip
+  const e = vEdges(), lo = e[0] - 12, hi = e[3] + 10, sx = x + 18, sw = pw - 36, sy = y + 80, shh = 16;
+  const X = d => sx + clamp((d - lo) / (hi - lo), 0, 1) * sw, bounds = [lo, ...e, hi];
+  for (let i = 0; i < 5; i++) { g.fillStyle = VZ[i].c; g.globalAlpha = i === z ? 1 : 0.45;
+    rrect(g, X(bounds[i]) + 1.5, sy, X(bounds[i + 1]) - X(bounds[i]) - 3, shh, 6); g.fill(); }
+  g.globalAlpha = 1;
+  ["Quiet", "Good", "Back of room", "Loud"].forEach((l, i) => { const d = [ (lo + e[0]) / 2, (e[1] + e[2]) / 2, (e[2] + e[3]) / 2, (e[3] + hi) / 2 ][i];
+    text(g, l, X(d), sy + shh + 15, "600 12px -apple-system, Inter, sans-serif", "#c9d0d8"); });
+  if (S.voice != null) { const mx = X(S.voice);
+    g.fillStyle = "#fff"; glow(g, "#fff", 8); g.beginPath(); g.moveTo(mx, sy - 2); g.lineTo(mx - 9, sy - 14); g.lineTo(mx + 9, sy - 14); g.fill();
+    g.fillRect(mx - 2, sy - 2, 4, shh + 4); noGlow(g); }
+  g.restore();
 }
 let last = performance.now(), fade = 0;
 function frame(now) {
@@ -799,6 +843,7 @@ function frame(now) {
   g.save();
   try { themes[cur].draw(g, W, H, layoutRect(), now / 1000, dt); } catch (e) { console.error(e); }
   g.restore();
+  if (S.mode === "voice") { g.setTransform(DPR, 0, 0, DPR, 0, 0); drawVoice(g, W, H); }
   if (fade > 0) { g.fillStyle = `rgba(0,0,0,${fade})`; g.fillRect(0, 0, W, H); fade = Math.max(0, fade - dt * 4); }
   requestAnimationFrame(frame);
 }
@@ -821,6 +866,11 @@ $("themeGrid").onclick = e => { const k = e.target.dataset.k; if (k != null) { f
 $("offset").value = S.offset; $("offv").textContent = "+" + S.offset;
 $("offset").oninput = e => { S.offset = +e.target.value; $("offv").textContent = "+" + S.offset; store.set("offset", S.offset); };
 const setResp = v => { S.resp = v; store.set("resp", v); [...$("resp").children].forEach(b => b.classList.toggle("on", b.dataset.v === v)); };
+const setMode = v => { S.mode = v; store.set("mode", v); ["mode", "mode2"].forEach(id => [...$(id).children].forEach(b => b.classList.toggle("on", b.dataset.v === v))); };
+$("mode").onclick = $("mode2").onclick = e => e.target.dataset.v && setMode(e.target.dataset.v); setMode(S.mode);
+const setDist = v => { S.dist = v; store.set("dist", v); [...$("dist").children].forEach(b => b.classList.toggle("on", b.dataset.v === v)); };
+$("dist").onclick = e => e.target.dataset.v && setDist(e.target.dataset.v); setDist(S.dist);
+if (/[?&]voice/.test(location.search)) setMode("voice");
 $("resp").onclick = e => e.target.dataset.v && setResp(e.target.dataset.v); setResp(S.resp);
 document.addEventListener("visibilitychange", async () => { if (!document.hidden && S.running) { try { wakeLock = await navigator.wakeLock?.request("screen"); } catch (e) {} } });
 if (store.get("seenHint", false)) $("hint").style.opacity = 0; else { store.set("seenHint", true); setTimeout(() => $("hint").style.opacity = 0, 5000); }
