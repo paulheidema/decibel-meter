@@ -2,249 +2,780 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0b0f14">
-<title>Decibel Meter</title>
+<meta name="apple-mobile-web-app-title" content="Decibel">
+<meta name="theme-color" content="#000000">
+<title>Decibel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;400;600&family=Orbitron:wght@500;700;900&family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&family=Special+Elite&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0b0f14; --card: #141b24; --line: #233041; --text: #e8eef5; --muted: #8a9bb0;
-    --green: #3ddc84; --yellow: #ffc940; --orange: #ff8a3d; --red: #ff4d5e;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  body { padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px); }
-  .wrap { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
-  h1 { font-size: 18px; font-weight: 600; margin: 0; color: var(--muted); letter-spacing: .5px; text-align: center; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
-  .gauge { position: relative; }
-  .gauge svg { width: 100%; height: auto; display: block; }
-  .readout { position: absolute; left: 0; right: 0; bottom: 6%; text-align: center; }
-  .db { font-size: 64px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
-  .unit { font-size: 18px; color: var(--muted); margin-left: 4px; }
-  .label { margin-top: 6px; font-size: 15px; color: var(--muted); min-height: 1.2em; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
-  .stat .v { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .stat .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
-  canvas { width: 100%; height: 110px; display: block; }
-  .row { display: flex; gap: 10px; }
-  button { flex: 1; font: inherit; font-size: 17px; font-weight: 600; border: 0; border-radius: 14px;
-    padding: 14px; color: #06210f; background: var(--green); cursor: pointer; }
-  button.secondary { background: #233041; color: var(--text); }
-  button.stop { background: var(--red); color: #fff; }
-  .calib { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
-  .calib input { flex: 1; accent-color: var(--green); }
-  .calib b { color: var(--text); font-variant-numeric: tabular-nums; min-width: 48px; text-align: right; }
-  .note { font-size: 12px; color: var(--muted); line-height: 1.45; }
-  .err { color: var(--red); font-size: 14px; display: none; }
-  details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-  td { padding: 4px 0; border-bottom: 1px solid var(--line); }
-  td:first-child { font-variant-numeric: tabular-nums; width: 70px; color: var(--muted); }
+  :root { --fg:#fff; --chrome:rgba(0,0,0,.45); --accent:#fff; --btnfg:#000; --font:-apple-system, sans-serif; --line:rgba(255,255,255,.18); }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; overscroll-behavior:none;
+    -webkit-user-select:none; user-select:none; touch-action:manipulation; }
+  canvas { position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; display:block; }
+  header, footer { position:fixed; left:0; right:0; display:flex; align-items:center; gap:10px; z-index:2;
+    font-family:var(--font); color:var(--fg); transition:color .4s; }
+  header { top:0; padding:calc(env(safe-area-inset-top) + 8px) 12px 6px; }
+  footer { bottom:0; padding:8px 18px calc(env(safe-area-inset-bottom) + 14px); justify-content:space-between; }
+  .title { flex:1; text-align:center; min-width:0; }
+  #tname { font-size:17px; font-weight:700; letter-spacing:2px; text-transform:uppercase; white-space:nowrap; }
+  #ttag { font-size:11px; opacity:.65; letter-spacing:1px; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #dots { display:flex; justify-content:center; gap:5px; margin-top:6px; }
+  #dots i { width:5px; height:5px; border-radius:3px; background:var(--fg); opacity:.25; transition:all .3s; }
+  #dots i.on { width:16px; opacity:.95; background:var(--accent); }
+  .icon { width:44px; height:44px; border-radius:22px; border:1px solid var(--line); background:var(--chrome);
+    color:var(--fg); display:grid; place-items:center; cursor:pointer; padding:0;
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+  .icon svg { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  #go { flex:0 0 auto; min-width:150px; height:54px; border-radius:27px; border:0; cursor:pointer;
+    font-family:var(--font); font-size:17px; font-weight:700; letter-spacing:3px; text-transform:uppercase;
+    background:var(--accent); color:var(--btnfg); box-shadow:0 0 24px color-mix(in srgb, var(--accent) 45%, transparent);
+    transition:transform .15s, background .4s; }
+  #go:active { transform:scale(.96); }
+  #go.live { background:transparent; color:var(--accent); border:2px solid var(--accent); }
+  #sheet { position:fixed; left:0; right:0; bottom:0; z-index:5; padding:22px 20px calc(env(safe-area-inset-bottom) + 22px);
+    background:rgba(18,18,20,.92); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
+    color:#eee; font-family:-apple-system, Inter, sans-serif; border-radius:22px 22px 0 0;
+    transform:translateY(105%); transition:transform .35s cubic-bezier(.2,.8,.2,1); }
+  #sheet.open { transform:none; }
+  #sheet h3 { margin:0 0 16px; font-size:17px; display:flex; justify-content:space-between; align-items:center; }
+  #sheet h3 button { background:none; border:0; color:#8ab4ff; font-size:16px; font-weight:600; cursor:pointer; }
+  .row { display:flex; align-items:center; gap:12px; margin:14px 0; font-size:14px; }
+  .row label { width:92px; color:#aaa; }
+  .row input[type=range] { flex:1; accent-color:#8ab4ff; }
+  .row b { min-width:44px; text-align:right; font-variant-numeric:tabular-nums; }
+  .seg { display:flex; flex:1; background:#2a2a2e; border-radius:10px; padding:3px; }
+  .seg button { flex:1; border:0; background:none; color:#ccc; padding:8px; border-radius:8px; font:inherit; cursor:pointer; }
+  .seg button.on { background:#4a4a52; color:#fff; font-weight:600; }
+  .note { font-size:12px; color:#888; line-height:1.5; margin:12px 0 0; }
+  .themes { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:6px; }
+  .themes button { aspect-ratio:1; border-radius:12px; border:2px solid transparent; cursor:pointer; padding:0; font-size:10px; color:#fff; font-weight:600; }
+  .themes button.on { border-color:#fff; }
+  #err { position:fixed; left:20px; right:20px; top:40%; z-index:6; padding:16px; border-radius:14px; display:none;
+    background:rgba(200,30,40,.92); color:#fff; font:15px -apple-system, sans-serif; text-align:center; }
+  #hint { position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom) + 84px); text-align:center; z-index:2;
+    font:12px -apple-system, sans-serif; color:var(--fg); opacity:.5; letter-spacing:1px; transition:opacity 1s; pointer-events:none; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>DECIBEL METER</h1>
+<canvas id="c"></canvas>
 
-  <div class="card gauge">
-    <svg viewBox="0 0 300 180" aria-hidden="true">
-      <defs>
-        <linearGradient id="g" x1="0" x2="1">
-          <stop offset="0" stop-color="#3ddc84"/><stop offset=".5" stop-color="#ffc940"/>
-          <stop offset=".75" stop-color="#ff8a3d"/><stop offset="1" stop-color="#ff4d5e"/>
-        </linearGradient>
-      </defs>
-      <path d="M30 160 A120 120 0 0 1 270 160" fill="none" stroke="#233041" stroke-width="18" stroke-linecap="round"/>
-      <path id="arc" d="M30 160 A120 120 0 0 1 270 160" fill="none" stroke="url(#g)" stroke-width="18"
-            stroke-linecap="round" pathLength="100" stroke-dasharray="0 100"/>
-      <line id="peak" x1="150" y1="28" x2="150" y2="52" stroke="#e8eef5" stroke-width="3" stroke-linecap="round" opacity="0"/>
-      <text x="22" y="178" fill="#8a9bb0" font-size="11">20</text>
-      <text x="268" y="178" fill="#8a9bb0" font-size="11">120</text>
-    </svg>
-    <div class="readout">
-      <div><span class="db" id="db">--</span><span class="unit">dB</span></div>
-      <div class="label" id="label">Tap Start to begin</div>
-    </div>
-  </div>
+<header id="top">
+  <button class="icon" id="prev" aria-label="Previous theme"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <div class="title"><div id="tname"></div><div id="ttag"></div><div id="dots"></div></div>
+  <button class="icon" id="next" aria-label="Next theme"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+</header>
 
-  <div class="card stats">
-    <div class="stat"><div class="v" id="min">--</div><div class="k">Min</div></div>
-    <div class="stat"><div class="v" id="avg">--</div><div class="k">Avg</div></div>
-    <div class="stat"><div class="v" id="max">--</div><div class="k">Max</div></div>
-  </div>
+<div id="hint">SWIPE TO CHANGE THEME</div>
 
-  <div class="card"><canvas id="hist"></canvas></div>
+<footer id="bot">
+  <button class="icon" id="gear" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  <button id="go">Start</button>
+  <button class="icon" id="rst" aria-label="Reset readings"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+</footer>
 
-  <div class="row">
-    <button id="start">Start</button>
-    <button id="reset" class="secondary">Reset</button>
-  </div>
-  <div class="err" id="err"></div>
-
-  <div class="card">
-    <div class="calib">
-      <span>Calibrate</span>
-      <input type="range" id="offset" min="60" max="130" step="1" value="100">
-      <b id="offv">+100</b>
-    </div>
-    <p class="note">Phone mics aren't lab instruments. Readings are an estimate (roughly ±5 dB). To improve accuracy,
-      compare with a known meter and slide Calibrate until they match. Your setting is saved on this device.</p>
-  </div>
-
-  <div class="card">
-    <details>
-      <summary>Typical sound levels</summary>
-      <table>
-        <tr><td>30 dB</td><td>Whisper, quiet bedroom</td></tr>
-        <tr><td>40 dB</td><td>Library, quiet office</td></tr>
-        <tr><td>60 dB</td><td>Normal conversation</td></tr>
-        <tr><td>70 dB</td><td>Busy restaurant, vacuum</td></tr>
-        <tr><td>85 dB</td><td>Heavy traffic — risk with long exposure</td></tr>
-        <tr><td>100 dB</td><td>Motorbike, loud concert</td></tr>
-        <tr><td>120 dB</td><td>Thunder, siren up close — pain threshold</td></tr>
-      </table>
-    </details>
-  </div>
+<div id="sheet">
+  <h3>Settings <button id="close">Done</button></h3>
+  <div class="row"><label>Theme</label></div>
+  <div class="themes" id="themeGrid"></div>
+  <div class="row"><label>Calibration</label><input type="range" id="offset" min="60" max="130" step="1"><b id="offv"></b></div>
+  <div class="row"><label>Response</label><div class="seg" id="resp"><button data-v="fast">Fast</button><button data-v="slow">Slow</button></div></div>
+  <p class="note">Fast (125 ms) follows quick sounds like claps; Slow (1 s) gives a steadier reading. Phone mics are estimates
+    (about ±5 dB). Compare with a known meter and move Calibration until they match. Settings are saved on this phone.</p>
 </div>
+
+<div id="err"></div>
 
 <script>
 (() => {
-  const $ = id => document.getElementById(id);
-  const MIN_DB = 20, MAX_DB = 120, HIST_SECONDS = 60;
-  let ctx, analyser, stream, buf, raf, running = false;
-  let smooth = null, min = Infinity, max = -Infinity, sum = 0, count = 0, peakHold = null, peakTime = 0;
-  const history = [];
-  let lastHist = 0;
+"use strict";
+// ───────────────────────── basics ─────────────────────────
+const TAU = Math.PI * 2, MIN_DB = 20, MAX_DB = 120;
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const norm = d => d == null ? 0 : clamp((d - MIN_DB) / (MAX_DB - MIN_DB), 0, 1);
+const fmt = (v, dec = 0) => v == null || !isFinite(v) ? "--" : v.toFixed(dec);
+const lerp = (a, b, k) => a + (b - a) * k;
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const status = d => d == null ? "STANDBY" : d < 35 ? "VERY QUIET" : d < 50 ? "QUIET" : d < 65 ? "MODERATE" :
+  d < 75 ? "CONVERSATION" : d < 85 ? "LOUD" : d < 100 ? "VERY LOUD" : "DANGEROUS";
+const levelColor = d => d == null ? "#666" : d < 60 ? "#3ddc84" : d < 75 ? "#c6e34a" : d < 85 ? "#ffc940" : d < 100 ? "#ff8a3d" : "#ff3b4e";
+// seeded random for stable decorations
+let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
 
-  let offset = 100;
-  try { const s = localStorage.getItem("dbOffset"); if (s) offset = +s; } catch (e) {}
-  $("offset").value = offset; $("offv").textContent = "+" + offset;
-  $("offset").addEventListener("input", e => {
-    offset = +e.target.value; $("offv").textContent = "+" + offset;
-    try { localStorage.setItem("dbOffset", offset); } catch (e) {}
-  });
+// ───────────────────────── state ─────────────────────────
+const NB = 48, HIST = 600;               // spectrum bands, history samples (30 s @ 20 Hz)
+const S = {
+  db: null, raw: null, peak: null, peakT: 0, min: null, max: null, leq: null, eSum: 0, eN: 0,
+  hist: [], bands: new Float32Array(NB), wave: new Float32Array(256),
+  running: false, t0: 0, elapsed: 0, offset: store.get("offset", 100), resp: store.get("resp", "fast")
+};
+const demo = /[?&]demo/.test(location.search);
 
-  const levelLabel = d =>
-    d < 30 ? "Very quiet" : d < 45 ? "Quiet" : d < 60 ? "Moderate" : d < 70 ? "Conversation" :
-    d < 85 ? "Loud" : d < 100 ? "Very loud — limit exposure" : "Dangerous";
-  const color = d => d < 60 ? "#3ddc84" : d < 85 ? "#ffc940" : d < 100 ? "#ff8a3d" : "#ff4d5e";
-  const pct = d => Math.max(0, Math.min(100, (d - MIN_DB) / (MAX_DB - MIN_DB) * 100));
-
-  function setPeakMarker(d) {
-    const a = Math.PI * (1 - pct(d) / 100), r1 = 98, r2 = 142, cx = 150, cy = 160;
-    const p = $("peak");
-    p.setAttribute("x1", cx + r1 * Math.cos(a)); p.setAttribute("y1", cy - r1 * Math.sin(a));
-    p.setAttribute("x2", cx + r2 * Math.cos(a)); p.setAttribute("y2", cy - r2 * Math.sin(a));
-    p.setAttribute("opacity", 1);
+// ───────────────────────── audio engine ─────────────────────────
+let actx, analyser, stream, tbuf, fbuf, wakeLock, bandIdx = [];
+function buildBands(sr, n) {
+  bandIdx = [];
+  const lo = 40, hi = 16000;
+  for (let i = 0; i <= NB; i++) {
+    const f = lo * Math.pow(hi / lo, i / NB);
+    bandIdx.push(clamp(Math.round(f / (sr / 2) * n), 1, n - 1));
   }
-
-  function drawHistory() {
-    const c = $("hist"), dpr = window.devicePixelRatio || 1;
-    const w = c.clientWidth, h = c.clientHeight;
-    if (c.width !== w * dpr) { c.width = w * dpr; c.height = h * dpr; }
-    const g = c.getContext("2d");
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.clearRect(0, 0, w, h);
-    g.strokeStyle = "#233041"; g.fillStyle = "#8a9bb0"; g.font = "10px -apple-system, sans-serif";
-    for (const lv of [40, 60, 85, 100]) {
-      const y = h - (lv - MIN_DB) / (MAX_DB - MIN_DB) * h;
-      g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); g.fillText(lv, 2, y - 2);
-    }
-    if (history.length < 2) return;
-    const n = HIST_SECONDS * 10, step = w / (n - 1), start = n - history.length;
-    for (let i = 1; i < history.length; i++) {
-      const x0 = (start + i - 1) * step, x1 = (start + i) * step;
-      const y0 = h - pct(history[i - 1]) / 100 * h, y1 = h - pct(history[i]) / 100 * h;
-      g.strokeStyle = color(history[i]); g.lineWidth = 2;
-      g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
-    }
-  }
-
-  function tick(t) {
-    analyser.getFloatTimeDomainData(buf);
-    let s = 0;
-    for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
-    const rms = Math.sqrt(s / buf.length);
-    const dbfs = 20 * Math.log10(Math.max(rms, 1e-8));
-    const d = Math.max(0, dbfs + offset);
-
-    smooth = smooth === null ? d : smooth * 0.85 + d * 0.15;   // ~fast response
-    const shown = Math.round(smooth);
-
-    if (count > 5) { min = Math.min(min, smooth); max = Math.max(max, smooth); }
-    // average in the energy domain (proper dB averaging)
-    sum += Math.pow(10, smooth / 10); count++;
-
-    if (peakHold === null || smooth > peakHold || t - peakTime > 2000) { peakHold = smooth; peakTime = t; }
-
-    $("db").textContent = shown;
-    $("db").style.color = color(smooth);
-    $("label").textContent = levelLabel(smooth);
-    $("arc").setAttribute("stroke-dasharray", pct(smooth) + " 100");
-    setPeakMarker(peakHold);
-    if (isFinite(min)) {
-      $("min").textContent = Math.round(min);
-      $("max").textContent = Math.round(max);
-      $("avg").textContent = Math.round(10 * Math.log10(sum / count));
-    }
-    if (t - lastHist > 100) {
-      history.push(smooth); lastHist = t;
-      if (history.length > HIST_SECONDS * 10) history.shift();
-      drawHistory();
-    }
-    raf = requestAnimationFrame(tick);
-  }
-
-  async function start() {
-    $("err").style.display = "none";
+}
+async function start() {
+  $("err").style.display = "none";
+  if (!demo) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return showErr("This browser can't use the microphone here. Open the https link in Safari.");
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-      });
-    } catch (e) {
-      $("err").textContent = "Microphone access was blocked. Allow the mic for this site in your browser settings, then try again. (" + e.name + ")";
-      $("err").style.display = "block";
-      return;
-    }
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
-    await ctx.resume();
-    const src = ctx.createMediaStreamSource(stream);
-    analyser = ctx.createAnalyser();
-    analyser.fftSize = 2048;
-    buf = new Float32Array(analyser.fftSize);
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    } catch (e) { return showErr("Microphone access was blocked. Allow the microphone for this site in Settings → Safari, then try again."); }
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    await actx.resume();
+    const src = actx.createMediaStreamSource(stream);
+    analyser = actx.createAnalyser();
+    analyser.fftSize = 4096; analyser.smoothingTimeConstant = 0.55;
     src.connect(analyser);
-    running = true;
-    $("start").textContent = "Stop"; $("start").className = "stop";
-    raf = requestAnimationFrame(tick);
+    tbuf = new Float32Array(analyser.fftSize);
+    fbuf = new Float32Array(analyser.frequencyBinCount);
+    buildBands(actx.sampleRate, analyser.frequencyBinCount);
   }
+  S.running = true; S.t0 = performance.now() - S.elapsed * 1000;
+  try { wakeLock = await navigator.wakeLock?.request("screen"); } catch (e) {}
+  $("go").textContent = "Stop"; $("go").classList.add("live");
+}
+function stop() {
+  S.running = false;
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  if (actx) actx.close();
+  stream = actx = analyser = null;
+  try { wakeLock && wakeLock.release(); } catch (e) {}
+  $("go").textContent = "Start"; $("go").classList.remove("live");
+}
+function reset() {
+  Object.assign(S, { peak: null, min: null, max: null, leq: null, eSum: 0, eN: 0, elapsed: 0, t0: performance.now() });
+  S.hist.length = 0;
+  themes.forEach(th => th.reset && th.reset());
+}
+function showErr(m) { const e = $("err"); e.textContent = m; e.style.display = "block"; setTimeout(() => e.style.display = "none", 6000); }
 
-  function stop() {
-    running = false;
-    cancelAnimationFrame(raf);
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    if (ctx) ctx.close();
-    $("start").textContent = "Start"; $("start").className = "";
-    $("label").textContent = "Paused";
+let lastHist = 0;
+function sample(now, dt) {
+  if (!S.running) { // settle visuals when stopped
+    for (let i = 0; i < NB; i++) S.bands[i] *= 0.9;
+    for (let i = 0; i < S.wave.length; i++) S.wave[i] *= 0.85;
+    return;
   }
-
-  function reset() {
-    min = Infinity; max = -Infinity; sum = 0; count = 0; history.length = 0; peakHold = null;
-    ["min", "avg", "max"].forEach(id => $(id).textContent = "--");
-    drawHistory();
+  S.elapsed = (now - S.t0) / 1000;
+  let dbfs;
+  if (demo) {
+    const t = now / 1000;
+    const spl = 62 + 14 * Math.sin(t * 0.6) + 7 * Math.sin(t * 2.1) + 4 * Math.sin(t * 5.3) + Math.random() * 3;
+    const lv = norm(spl);
+    for (let i = 0; i < NB; i++) S.bands[i] = clamp(0.15 + 0.6 * Math.exp(-((i - 14) ** 2) / 90) * (0.6 + 0.4 * Math.sin(t * 2 + i * 0.4)) + Math.random() * 0.12 + lv * 0.25 - 0.1, 0, 1);
+    for (let i = 0; i < S.wave.length; i++) S.wave[i] = (Math.sin(i * 0.25 + t * 9) * 0.5 + Math.sin(i * 0.9 + t * 13) * 0.25 + (Math.random() - .5) * 0.2) * lv * 0.25;
+    dbfs = spl - S.offset;
+  } else {
+    analyser.getFloatTimeDomainData(tbuf);
+    let s = 0; for (let i = 0; i < tbuf.length; i++) s += tbuf[i] * tbuf[i];
+    dbfs = 20 * Math.log10(Math.max(Math.sqrt(s / tbuf.length), 1e-9));
+    const step = tbuf.length / S.wave.length;
+    for (let i = 0; i < S.wave.length; i++) S.wave[i] = tbuf[Math.floor(i * step)];
+    analyser.getFloatFrequencyData(fbuf);
+    for (let b = 0; b < NB; b++) {
+      let m = -140; for (let k = bandIdx[b]; k <= Math.max(bandIdx[b], bandIdx[b + 1] - 1); k++) m = Math.max(m, fbuf[k]);
+      S.bands[b] = lerp(S.bands[b], clamp((m + 100) / 75, 0, 1), 0.5);
+    }
   }
-
-  $("start").addEventListener("click", () => running ? stop() : start());
-  $("reset").addEventListener("click", reset);
-  window.addEventListener("resize", drawHistory);
-  drawHistory();
-
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    $("err").textContent = "This browser can't access the microphone here. Open the page over https (e.g. a hosted link) in Safari or Chrome.";
-    $("err").style.display = "block";
+  const raw = Math.max(0, dbfs + S.offset);
+  S.raw = raw;
+  const tau = S.resp === "slow" ? 1.0 : 0.125;
+  const a = 1 - Math.exp(-dt / tau);
+  S.db = S.db == null ? raw : S.db + (raw - S.db) * a;
+  if (S.elapsed > 0.4) {
+    S.min = S.min == null ? S.db : Math.min(S.min, S.db);
+    S.max = S.max == null ? S.db : Math.max(S.max, S.db);
   }
+  if (S.peak == null || S.db > S.peak || now - S.peakT > 2500) { S.peak = S.db; S.peakT = now; }
+  S.eSum += Math.pow(10, S.db / 10) * dt; S.eN += dt;
+  S.leq = 10 * Math.log10(S.eSum / S.eN);
+  if (now - lastHist > 50) { S.hist.push(S.db); lastHist = now; if (S.hist.length > HIST) S.hist.shift(); }
+}
+
+// ───────────────────────── drawing helpers ─────────────────────────
+function glow(g, c, b) { g.shadowColor = c; g.shadowBlur = b; }
+function noGlow(g) { g.shadowBlur = 0; g.shadowColor = "transparent"; }
+function line(g, x1, y1, x2, y2) { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); }
+function text(g, s, x, y, font, color, align = "center", base = "middle") {
+  g.font = font; g.fillStyle = color; g.textAlign = align; g.textBaseline = base; g.fillText(s, x, y);
+}
+function rrect(g, x, y, w, h, r) { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h); }
+function clock(sec) { const m = Math.floor(sec / 60), s = sec % 60; return String(m).padStart(2, "0") + ":" + s.toFixed(1).padStart(4, "0"); }
+function histPath(g, x, y, w, h, n = HIST) {
+  const H = S.hist; if (H.length < 2) return false;
+  const step = w / (n - 1), off = n - H.length;
+  g.beginPath();
+  for (let i = 0; i < H.length; i++) {
+    const px = x + (off + i) * step, py = y + h - norm(H[i]) * h;
+    i ? g.lineTo(px, py) : g.moveTo(px, py);
+  }
+  return true;
+}
+const arcAng = (v, a0, sweep) => a0 + norm(v) * sweep;
+
+// ───────────────────────── themes ─────────────────────────
+const themes = [
+
+// 1 ── COVERT OPS ─────────────────────────────────────────
+{ name: "Covert Ops", tag: "Field surveillance HUD", swatch: "#ff2b3a",
+  ui: { fg: "#ff4b55", chrome: "rgba(40,0,0,.55)", accent: "#ff2b3a", btnfg: "#000", font: "Rajdhani, sans-serif", line: "rgba(255,60,70,.4)" },
+  draw(g, w, h, r, t) {
+    const red = "#ff2b3a", dim = "rgba(255,43,58,.18)";
+    g.fillStyle = "#040202"; g.fillRect(0, 0, w, h);
+    g.strokeStyle = "rgba(255,40,50,.06)"; g.lineWidth = 1;
+    for (let x = (t * 6) % 28; x < w; x += 28) line(g, x, 0, x, h);
+    for (let y = 0; y < h; y += 28) line(g, 0, y, w, y);
+    // corner brackets
+    g.strokeStyle = red; g.lineWidth = 2; const b = 18, m = 10;
+    [[r.x + m, r.y, 1, 1], [r.x + r.w - m, r.y, -1, 1], [r.x + m, r.y + r.h, 1, -1], [r.x + r.w - m, r.y + r.h, -1, -1]].forEach(([x, y, sx, sy]) => {
+      g.beginPath(); g.moveTo(x, y + b * sy); g.lineTo(x, y); g.lineTo(x + b * sx, y); g.stroke(); });
+    text(g, "ACOUSTIC SURVEILLANCE // CH-01", r.x + 22, r.y + 16, "600 12px Rajdhani", red, "left");
+    text(g, "T+ " + clock(S.elapsed), r.x + r.w - 22, r.y + 16, "600 12px Rajdhani", red, "right");
+    const cx = w / 2, R = Math.min(r.w * 0.38, r.h * 0.27), cy = r.y + 30 + R * 1.12;
+    const a0 = Math.PI * 0.75, sw = Math.PI * 1.5, lv = norm(S.db);
+    for (let i = 0; i <= 100; i++) {
+      const a = a0 + i / 100 * sw, on = S.db != null && i / 100 <= lv, major = i % 10 === 0;
+      g.strokeStyle = on ? red : dim; g.lineWidth = major ? 3 : 2;
+      if (on) glow(g, red, 10);
+      const r1 = R * (major ? 0.88 : 0.92), r2 = R;
+      line(g, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1, cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+      noGlow(g);
+      if (major) text(g, String(20 + i), cx + Math.cos(a) * R * 1.1, cy + Math.sin(a) * R * 1.1, "600 11px Rajdhani", on ? red : "rgba(255,60,70,.45)");
+    }
+    if (S.peak != null) { const a = arcAng(S.peak, a0, sw); g.fillStyle = "#fff";
+      g.beginPath(); g.arc(cx + Math.cos(a) * R * 1.03, cy + Math.sin(a) * R * 1.03, 3, 0, TAU); g.fill(); }
+    g.save(); g.translate(cx, cy);
+    g.rotate(t * 0.4); g.setLineDash([4, 10]); g.strokeStyle = "rgba(255,43,58,.5)"; g.lineWidth = 1.5;
+    g.beginPath(); g.arc(0, 0, R * 0.78, 0, TAU); g.stroke();
+    g.rotate(-t * 0.9); g.setLineDash([R * 0.5, R * 0.3]); g.lineWidth = 3; g.strokeStyle = "rgba(255,43,58,.35)";
+    g.beginPath(); g.arc(0, 0, R * 0.7, 0, TAU); g.stroke(); g.restore(); g.setLineDash([]);
+    glow(g, red, 18);
+    text(g, fmt(S.db), cx, cy - R * 0.04, `700 ${R * 0.62}px Rajdhani`, "#fff");
+    noGlow(g);
+    text(g, "dB SPL", cx, cy + R * 0.34, "600 14px Rajdhani", red);
+    // status
+    const alert = S.db != null && S.db >= 85, blink = !alert || Math.floor(t * 3) % 2;
+    const sy = cy + R * 1.18;
+    g.strokeStyle = red; g.lineWidth = 1.5; rrect(g, cx - 110, sy - 15, 220, 30, 2); g.stroke();
+    if (alert && blink) { g.fillStyle = "rgba(255,43,58,.25)"; g.fill(); }
+    text(g, "STATUS: " + (S.db == null ? "STANDBY" : S.db < 70 ? "NOMINAL" : S.db < 85 ? "ELEVATED" : "BREACH"), cx, sy + 1, "700 15px Rajdhani", blink ? red : "#600");
+    // stats
+    const st = [["PEAK", S.peak], ["MIN", S.min], ["LEQ", S.leq], ["MAX", S.max]], bw = (r.w - 48) / 4, by = sy + 30;
+    st.forEach(([k, v], i) => { const x = r.x + 24 + i * bw;
+      g.strokeStyle = "rgba(255,43,58,.35)"; g.lineWidth = 1; g.strokeRect(x + 3, by, bw - 6, 44);
+      text(g, k, x + bw / 2, by + 12, "600 10px Rajdhani", "rgba(255,80,90,.7)");
+      text(g, fmt(v, 1), x + bw / 2, by + 31, "700 19px Rajdhani", "#fff"); });
+    // oscilloscope
+    const oy = by + 62, oh = Math.max(30, r.y + r.h - oy - 8);
+    g.strokeStyle = "rgba(255,43,58,.2)"; line(g, r.x + 24, oy + oh / 2, r.x + r.w - 24, oy + oh / 2);
+    g.strokeStyle = red; g.lineWidth = 1.6; glow(g, red, 8); g.beginPath();
+    for (let i = 0; i < S.wave.length; i++) { const x = r.x + 24 + i / (S.wave.length - 1) * (r.w - 48), y = oy + oh / 2 - clamp(S.wave[i] * 4, -1, 1) * oh / 2;
+      i ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.stroke(); noGlow(g);
+    // sweep
+    const sx = (t * 0.25 % 1) * w; const gr = g.createLinearGradient(sx - 60, 0, sx, 0);
+    gr.addColorStop(0, "rgba(255,43,58,0)"); gr.addColorStop(1, "rgba(255,43,58,.08)"); g.fillStyle = gr; g.fillRect(sx - 60, 0, 60, h);
+  } },
+
+// 2 ── HOLOGRAM ─────────────────────────────────────────
+{ name: "Hologram", tag: "Starship bridge projection", swatch: "#29e6ff",
+  ui: { fg: "#9ff3ff", chrome: "rgba(0,30,40,.5)", accent: "#29e6ff", btnfg: "#001218", font: "Orbitron, sans-serif", line: "rgba(41,230,255,.35)" },
+  init() { seed = 11; this.stars = Array.from({ length: 90 }, () => [rnd(), rnd(), rnd() * 1.4 + .3, rnd()]); },
+  draw(g, w, h, r, t) {
+    const c = "#29e6ff";
+    const bg = g.createRadialGradient(w / 2, h * 0.4, 0, w / 2, h * 0.4, h * 0.8);
+    bg.addColorStop(0, "#04303d"); bg.addColorStop(1, "#000308"); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    this.stars.forEach(([x, y, s, p]) => { g.fillStyle = `rgba(160,240,255,${0.25 + 0.5 * Math.abs(Math.sin(t + p * 9))})`;
+      g.fillRect(((x * w + t * 4 * s) % w), y * h, s, s); });
+    const cx = w / 2, R = Math.min(r.w * 0.3, r.h * 0.22), cy = r.y + R * 1.75;
+    // circular spectrum (mirrored)
+    g.lineCap = "round";
+    for (let i = 0; i < NB * 2; i++) {
+      const bi = i < NB ? i : NB * 2 - 1 - i, v = S.bands[bi];
+      const a = -Math.PI / 2 + i / (NB * 2) * TAU, r1 = R * 1.08, r2 = r1 + 4 + v * R * 0.75;
+      g.strokeStyle = `rgba(41,230,255,${0.35 + v * 0.65})`; g.lineWidth = 3; glow(g, c, 8);
+      line(g, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1, cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+    }
+    noGlow(g); g.lineCap = "butt";
+    // rings
+    g.save(); g.translate(cx, cy);
+    [[0.98, 0.3, 1, [2, 6]], [0.86, -0.5, 2, [30, 14]], [0.74, 0.8, 1, [1, 3]]].forEach(([k, sp, lw, d]) => {
+      g.save(); g.rotate(t * sp); g.setLineDash(d); g.strokeStyle = "rgba(41,230,255,.55)"; g.lineWidth = lw;
+      g.beginPath(); g.arc(0, 0, R * k, 0, TAU); g.stroke(); g.restore(); });
+    g.setLineDash([]);
+    g.strokeStyle = c; g.lineWidth = 4; glow(g, c, 16);
+    g.beginPath(); g.arc(0, 0, R * 0.92, -Math.PI / 2, -Math.PI / 2 + norm(S.db) * TAU); g.stroke(); noGlow(g);
+    g.restore();
+    glow(g, c, 25); text(g, fmt(S.db), cx, cy - 4, `700 ${R * 0.55}px Orbitron`, "#e6fdff"); noGlow(g);
+    text(g, "DECIBELS", cx, cy + R * 0.36, "500 11px Orbitron", c);
+    text(g, status(S.db), cx, cy + R * 2.0 - 8, "700 14px Orbitron", c);
+    // history panel
+    const py = cy + R * 2.0 + 14, ph = Math.max(50, (r.y + r.h) - py - 70), px = r.x + 20, pw = r.w - 40;
+    g.strokeStyle = "rgba(41,230,255,.3)"; g.lineWidth = 1; rrect(g, px, py, pw, ph, 10); g.stroke();
+    if (histPath(g, px + 8, py + 8, pw - 16, ph - 16)) {
+      g.strokeStyle = c; g.lineWidth = 2; glow(g, c, 10); g.stroke(); noGlow(g);
+      g.lineTo(px + pw - 8, py + ph - 8); g.lineTo(px + 8 + (HIST - S.hist.length) / (HIST - 1) * (pw - 16), py + ph - 8); g.closePath();
+      const fg = g.createLinearGradient(0, py, 0, py + ph); fg.addColorStop(0, "rgba(41,230,255,.3)"); fg.addColorStop(1, "rgba(41,230,255,0)");
+      g.fillStyle = fg; g.fill(); }
+    const st = [["MIN", S.min], ["AVG", S.leq], ["PEAK", S.peak], ["MAX", S.max]], bw = pw / 4, sy = py + ph + 12;
+    st.forEach(([k, v], i) => { const x = px + i * bw + 4;
+      g.fillStyle = "rgba(41,230,255,.08)"; rrect(g, x, sy, bw - 8, 48, 24); g.fill(); g.strokeStyle = "rgba(41,230,255,.35)"; g.stroke();
+      text(g, k, x + (bw - 8) / 2, sy + 15, "500 9px Orbitron", c);
+      text(g, fmt(v, 1), x + (bw - 8) / 2, sy + 33, "700 14px Orbitron", "#e6fdff"); });
+  } },
+
+// 3 ── STUDIO VU ─────────────────────────────────────────
+{ name: "Studio VU", tag: "Vintage analog console meter", swatch: "#e8c46a",
+  ui: { fg: "#f3dfae", chrome: "rgba(40,22,10,.6)", accent: "#e8b04a", btnfg: "#2a1606", font: "'Playfair Display', serif", line: "rgba(232,196,106,.4)" },
+  reset() { this.pos = 0; this.vel = 0; }, init() { this.reset(); },
+  draw(g, w, h, r, t, dt) {
+    const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, "#2b1a0e"); bg.addColorStop(1, "#0e0703");
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.strokeStyle = "rgba(255,200,140,.035)"; g.lineWidth = 2;
+    for (let y = 0; y < h; y += 7) { g.beginPath(); g.moveTo(0, y); g.bezierCurveTo(w * .3, y + 6 * Math.sin(y), w * .6, y - 5, w, y + 3); g.stroke(); }
+    // needle physics (spring + damping for real overshoot)
+    const target = norm(S.db); this.vel += (target - this.pos) * 180 * dt; this.vel *= Math.exp(-14 * dt); this.pos += this.vel * dt;
+    const pos = clamp(this.pos, -0.03, 1.03);
+    const fw = Math.min(r.w - 32, 420), fh = fw * 0.66, fx = (w - fw) / 2, fy = r.y + 20;
+    // bezel
+    const bz = g.createLinearGradient(0, fy - 14, 0, fy + fh + 14); bz.addColorStop(0, "#d9d9d9"); bz.addColorStop(.5, "#6d6d6d"); bz.addColorStop(1, "#c8c8c8");
+    g.fillStyle = bz; rrect(g, fx - 12, fy - 12, fw + 24, fh + 24, 18); g.fill();
+    g.fillStyle = "#111"; rrect(g, fx - 3, fy - 3, fw + 6, fh + 6, 10); g.fill();
+    const face = g.createRadialGradient(fx + fw / 2, fy + fh * 0.75, 10, fx + fw / 2, fy + fh * 0.6, fw * 0.75);
+    const lit = 0.75 + 0.25 * norm(S.db);
+    face.addColorStop(0, `rgba(255,236,170,${lit})`); face.addColorStop(.6, "#ecd497"); face.addColorStop(1, "#b89652");
+    g.fillStyle = face; rrect(g, fx, fy, fw, fh, 8); g.fill();
+    g.save(); rrect(g, fx, fy, fw, fh, 8); g.clip();
+    const px = fx + fw / 2, py = fy + fh * 1.02, R = fh * 0.82, A0 = -Math.PI / 2 - 0.85, SW = 1.7;
+    g.strokeStyle = "#2b1d0c"; g.lineWidth = 1.5; g.beginPath(); g.arc(px, py, R, A0, A0 + SW * 0.65); g.stroke();
+    g.strokeStyle = "#c0201a"; g.lineWidth = 5; g.beginPath(); g.arc(px, py, R + 3, A0 + SW * 0.65, A0 + SW); g.stroke();
+    for (let d = 20; d <= 120; d += 5) {
+      const a = A0 + (d - 20) / 100 * SW, major = d % 20 === 0, red = d >= 85;
+      g.strokeStyle = red ? "#c0201a" : "#2b1d0c"; g.lineWidth = major ? 2.5 : 1.2;
+      const r1 = R - (major ? 14 : 8);
+      line(g, px + Math.cos(a) * r1, py + Math.sin(a) * r1, px + Math.cos(a) * R, py + Math.sin(a) * R);
+      if (major) text(g, String(d), px + Math.cos(a) * (R + 16), py + Math.sin(a) * (R + 16), `700 ${fw * 0.04}px 'Playfair Display'`, red ? "#c0201a" : "#2b1d0c");
+    }
+    text(g, "dB", px, fy + fh * 0.58, `italic 500 ${fw * 0.09}px 'Playfair Display'`, "#2b1d0c");
+    text(g, "SOUND LEVEL", px, fy + fh * 0.72, `600 ${fw * 0.03}px Inter`, "#5a4320");
+    // needle
+    const na = A0 + pos * SW;
+    g.strokeStyle = "rgba(0,0,0,.18)"; g.lineWidth = 2.5; line(g, px + 4, py + 4, px + 4 + Math.cos(na) * R * 1.02, py + 4 + Math.sin(na) * R * 1.02);
+    g.strokeStyle = "#121212"; g.lineWidth = 2; line(g, px, py, px + Math.cos(na) * R * 1.02, py + Math.sin(na) * R * 1.02);
+    g.fillStyle = "#151515"; g.beginPath(); g.arc(px, py, fh * 0.2, Math.PI, TAU); g.fill();
+    // glass glare
+    const gl = g.createLinearGradient(fx, fy, fx + fw, fy + fh); gl.addColorStop(0, "rgba(255,255,255,.22)"); gl.addColorStop(.4, "rgba(255,255,255,0)");
+    g.fillStyle = gl; g.fillRect(fx, fy, fw, fh);
+    g.restore();
+    // screws
+    [[fx - 4, fy - 4], [fx + fw + 4, fy - 4], [fx - 4, fy + fh + 4], [fx + fw + 4, fy + fh + 4]].forEach(([x, y]) => {
+      g.fillStyle = "#999"; g.beginPath(); g.arc(x, y, 4, 0, TAU); g.fill(); g.strokeStyle = "#444"; g.lineWidth = 1.2; line(g, x - 3, y - 1, x + 3, y + 1); });
+    // amber readout + LED
+    const ry = fy + fh + 40, rw = Math.min(260, r.w - 60);
+    g.fillStyle = "#0b0602"; rrect(g, w / 2 - rw / 2, ry, rw, 64, 10); g.fill(); g.strokeStyle = "#5a3d1a"; g.lineWidth = 2; g.stroke();
+    glow(g, "#ffa630", 14); text(g, fmt(S.db, 1), w / 2 - 8, ry + 34, "44px 'Share Tech Mono'", "#ffb347"); noGlow(g);
+    text(g, "dB", w / 2 + rw / 2 - 26, ry + 40, "16px 'Share Tech Mono'", "#a8762b");
+    const hot = S.db != null && S.db >= 85;
+    g.fillStyle = hot ? "#ff2a1a" : "#3a0a06"; if (hot) glow(g, "#ff2a1a", 18);
+    g.beginPath(); g.arc(w / 2 - rw / 2 + 22, ry + 32, 7, 0, TAU); g.fill(); noGlow(g);
+    text(g, "PEAK", w / 2 - rw / 2 + 22, ry + 52, "600 8px Inter", "#a8762b");
+    // engraved plates
+    const st = [["MIN", S.min], ["LEQ", S.leq], ["MAX", S.max]], pw = Math.min(110, (r.w - 40) / 3), sy = ry + 84;
+    st.forEach(([k, v], i) => { const x = w / 2 + (i - 1) * (pw + 8) - pw / 2;
+      const pg = g.createLinearGradient(0, sy, 0, sy + 54); pg.addColorStop(0, "#c9a85c"); pg.addColorStop(1, "#8a6a2c");
+      g.fillStyle = pg; rrect(g, x, sy, pw, 54, 6); g.fill();
+      text(g, k, x + pw / 2, sy + 15, "700 10px Inter", "#3d2a0c");
+      text(g, fmt(v, 1), x + pw / 2, sy + 36, "700 20px 'Playfair Display'", "#21150a"); });
+  } },
+
+// 4 ── TERMINAL ─────────────────────────────────────────
+{ name: "Mainframe", tag: "Green-phosphor hacker terminal", swatch: "#33ff77",
+  ui: { fg: "#33ff77", chrome: "rgba(0,20,6,.6)", accent: "#33ff77", btnfg: "#001a07", font: "'Share Tech Mono', monospace", line: "rgba(51,255,119,.4)" },
+  reset() { this.log = []; this.lt = 0; }, init() { this.reset(); },
+  draw(g, w, h, r, t) {
+    const G = "#33ff77", D = "rgba(51,255,119,.45)";
+    g.fillStyle = "#010a03"; g.fillRect(0, 0, w, h);
+    g.globalAlpha = 0.93 + Math.random() * 0.07;
+    const x0 = r.x + 18, fs = Math.max(11, Math.min(14, r.w / 30)), lh = fs * 1.45;
+    let y = r.y + 14;
+    glow(g, G, 6);
+    const L = (s, c = G, f = fs) => { text(g, s, x0, y, `${f}px 'Share Tech Mono'`, c, "left", "top"); y += f * 1.45; };
+    L("> ACOUSTIC_MONITOR v4.2  [" + (S.running ? "ONLINE" : "IDLE") + "]");
+    L("> uplink: mic0 / 48kHz / rms / " + S.resp.toUpperCase(), D);
+    L("> session " + clock(S.elapsed) + (S.running && Math.floor(t * 2) % 2 ? " █" : ""), D);
+    y += lh * 0.5;
+    const big = Math.min(r.w * 0.36, 150);
+    text(g, fmt(S.db, 1), x0 - 4, y, `${big}px 'Share Tech Mono'`, G, "left", "top");
+    text(g, "dB", x0 + g.measureText(fmt(S.db, 1)).width + 4, y + big * 0.6, `${big * 0.25}px 'Share Tech Mono'`, D, "left", "top");
+    y += big * 1.0;
+    g.font = `${fs}px 'Share Tech Mono'`; const cols = Math.floor((r.w - 36) / g.measureText("█").width) - 2, filled = Math.round(norm(S.db) * cols);
+    L("[" + "█".repeat(filled) + "░".repeat(Math.max(0, cols - filled)) + "]");
+    L("STATUS ........ " + status(S.db), S.db != null && S.db >= 85 && Math.floor(t * 4) % 2 ? "#ffef5a" : G);
+    L("MIN ........... " + fmt(S.min, 1)); L("MAX ........... " + fmt(S.max, 1));
+    L("LEQ ........... " + fmt(S.leq, 1)); L("PEAK(2s) ...... " + fmt(S.peak, 1));
+    y += lh * 0.4;
+    if (S.running && t - this.lt > 0.5) { this.lt = t;
+      const d = new Date(), ts = d.toTimeString().slice(0, 8);
+      this.log.push(`[${ts}] lvl=${fmt(S.db, 1).padStart(5)}  ${"▮".repeat(Math.round(norm(S.db) * 12))}`); if (this.log.length > 40) this.log.shift(); }
+    const room = Math.max(0, Math.floor((r.y + r.h - y) / lh));
+    this.log.slice(-room).forEach((s, i, a) => L(s, `rgba(51,255,119,${0.25 + 0.6 * (i + 1) / a.length})`));
+    noGlow(g); g.globalAlpha = 1;
+    g.fillStyle = "rgba(0,0,0,.28)"; for (let yy = 0; yy < h; yy += 3) g.fillRect(0, yy, w, 1);
+    const sl = (t * 120) % (h + 200) - 100; const sg = g.createLinearGradient(0, sl - 60, 0, sl);
+    sg.addColorStop(0, "rgba(51,255,119,0)"); sg.addColorStop(1, "rgba(51,255,119,.06)"); g.fillStyle = sg; g.fillRect(0, sl - 60, w, 60);
+    const v = g.createRadialGradient(w / 2, h / 2, h * 0.3, w / 2, h / 2, h * 0.8); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.75)");
+    g.fillStyle = v; g.fillRect(0, 0, w, h);
+  } },
+
+// 5 ── NEON GRID ─────────────────────────────────────────
+{ name: "Neon Drive", tag: "Synthwave night city", swatch: "#ff2fb4",
+  ui: { fg: "#ffd1f2", chrome: "rgba(40,0,50,.5)", accent: "#ff2fb4", btnfg: "#1a0020", font: "Orbitron, sans-serif", line: "rgba(255,47,180,.45)" },
+  init() { this.z = 0; },
+  draw(g, w, h, r, t, dt) {
+    const hz = r.y + r.h * 0.58;
+    const sky = g.createLinearGradient(0, 0, 0, hz); sky.addColorStop(0, "#07021a"); sky.addColorStop(.6, "#2d0a4e"); sky.addColorStop(1, "#7a1a6e");
+    g.fillStyle = sky; g.fillRect(0, 0, w, hz);
+    // sun
+    const lv = norm(S.db), SR = Math.min(w * 0.33, r.h * 0.22) * (0.8 + lv * 0.35), sx = w / 2, sy = hz - SR * 0.35;
+    g.save(); g.beginPath(); g.rect(0, 0, w, hz); g.clip();
+    const sg = g.createLinearGradient(0, sy - SR, 0, sy + SR); sg.addColorStop(0, "#ffe76a"); sg.addColorStop(.5, "#ff7a3c"); sg.addColorStop(1, "#ff2fb4");
+    glow(g, "#ff4fa0", 50); g.fillStyle = sg; g.beginPath(); g.arc(sx, sy, SR, 0, TAU); g.fill(); noGlow(g);
+    g.fillStyle = "#4a0f5c";
+    for (let i = 0; i < 7; i++) { const yy = sy + SR * (0.05 + i * 0.15), hh = 2 + i * 1.6; g.fillRect(sx - SR, yy, SR * 2, hh); }
+    g.restore();
+    // equalizer skyline
+    const n = 32, bw = w / n;
+    for (let i = 0; i < n; i++) { const v = S.bands[Math.floor(i / n * NB)], bh = 6 + v * r.h * 0.22;
+      g.fillStyle = `rgba(20,4,40,.85)`; g.fillRect(i * bw + 1, hz - bh, bw - 2, bh);
+      g.fillStyle = "#29e6ff"; glow(g, "#29e6ff", 10); g.fillRect(i * bw + 1, hz - bh, bw - 2, 2); noGlow(g); }
+    // ground grid
+    g.fillStyle = "#0a0118"; g.fillRect(0, hz, w, h - hz);
+    this.z = (this.z + dt * (0.4 + lv * 2.2)) % 1;
+    g.strokeStyle = "#ff2fb4"; g.lineWidth = 1.5; glow(g, "#ff2fb4", 8);
+    for (let i = 0; i < 14; i++) { const p = (i + this.z) / 14, y = hz + Math.pow(p, 2.2) * (h - hz); g.globalAlpha = p; line(g, 0, y, w, y); }
+    g.globalAlpha = 1;
+    for (let i = -12; i <= 12; i++) line(g, w / 2 + i * 8, hz, w / 2 + i * w * 0.18, h);
+    noGlow(g);
+    const hg = g.createLinearGradient(0, hz - 2, 0, hz + 30); hg.addColorStop(0, "rgba(255,47,180,.6)"); hg.addColorStop(1, "rgba(255,47,180,0)");
+    g.fillStyle = hg; g.fillRect(0, hz, w, 30);
+    // number
+    const fs = Math.min(r.w * 0.3, 130), ny = r.y + fs * 0.62;
+    g.save(); g.translate(w / 2, ny); g.transform(1, 0, -0.18, 1, 0, 0);
+    g.font = `900 ${fs}px Orbitron`; g.textAlign = "center"; g.textBaseline = "middle";
+    glow(g, "#ff2fb4", 30); g.lineWidth = 3; g.strokeStyle = "#ff2fb4"; g.strokeText(fmt(S.db), 0, 0);
+    const tg = g.createLinearGradient(0, -fs / 2, 0, fs / 2); tg.addColorStop(0, "#fff"); tg.addColorStop(1, "#ffb3e6");
+    g.fillStyle = tg; g.fillText(fmt(S.db), 0, 0); noGlow(g); g.restore();
+    text(g, "dB  ·  " + status(S.db), w / 2, ny + fs * 0.62, "700 13px Orbitron", "#29e6ff");
+    // stats on the road
+    const st = [["MIN", S.min], ["LEQ", S.leq], ["MAX", S.max]], yy = r.y + r.h - 30;
+    st.forEach(([k, v], i) => { const x = w / 2 + (i - 1) * r.w * 0.3;
+      text(g, k, x, yy - 14, "500 10px Orbitron", "#ff9de0");
+      glow(g, "#29e6ff", 12); text(g, fmt(v, 1), x, yy + 6, "700 20px Orbitron", "#dffbff"); noGlow(g); });
+  } },
+
+// 6 ── MINIMAL ─────────────────────────────────────────
+{ name: "Pure", tag: "Minimal, premium, calm", swatch: "#f2f2ef",
+  ui: { fg: "#111", chrome: "rgba(255,255,255,.7)", accent: "#111", btnfg: "#fff", font: "Inter, -apple-system, sans-serif", line: "rgba(0,0,0,.12)" },
+  draw(g, w, h, r, t) {
+    g.fillStyle = "#f4f4f1"; g.fillRect(0, 0, w, h);
+    const col = levelColor(S.db), cy = r.y + r.h * 0.3;
+    const br = Math.min(w, r.h) * (0.42 + 0.04 * Math.sin(t * 1.2)) * (0.85 + norm(S.db) * 0.3);
+    const bg = g.createRadialGradient(w / 2, cy, 0, w / 2, cy, br);
+    bg.addColorStop(0, col + "55"); bg.addColorStop(1, col + "00"); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    const fs = Math.min(r.w * 0.44, 190);
+    text(g, fmt(S.db), w / 2, cy, `200 ${fs}px Inter`, "#111");
+    text(g, "dB", w / 2, cy + fs * 0.52, "400 15px Inter", "#888");
+    g.fillStyle = col; g.beginPath(); const sw = 9; g.font = "600 13px Inter";
+    const lbl = status(S.db).toLowerCase().replace(/^./, c => c.toUpperCase()), lw = g.measureText(lbl).width;
+    g.arc(w / 2 - lw / 2 - sw, cy + fs * 0.52 + 30, 4, 0, TAU); g.fill();
+    text(g, lbl, w / 2 + 4, cy + fs * 0.52 + 30, "600 13px Inter", "#333");
+    // chart
+    const px = r.x + 24, pw = r.w - 48, py = cy + fs * 0.52 + 64, ph = Math.max(60, r.y + r.h - py - 80);
+    [40, 60, 85, 100].forEach(d => { const y = py + ph - norm(d) * ph; g.strokeStyle = "rgba(0,0,0,.07)"; g.lineWidth = 1; line(g, px, y, px + pw, y);
+      text(g, String(d), px + pw, y - 7, "400 10px Inter", "#aaa", "right"); });
+    if (histPath(g, px, py, pw, ph)) { g.strokeStyle = "#111"; g.lineWidth = 1.6; g.lineJoin = "round"; g.stroke(); }
+    text(g, "LAST 30 SECONDS", px, py - 12, "600 10px Inter", "#aaa", "left");
+    const st = [["Min", S.min], ["Average", S.leq], ["Max", S.max]], cw = pw / 3, sy = py + ph + 30;
+    st.forEach(([k, v], i) => { const x = px + cw * i + cw / 2;
+      text(g, k.toUpperCase(), x, sy, "600 10px Inter", "#999");
+      text(g, fmt(v, 1), x, sy + 24, "400 24px Inter", "#111"); });
+  } },
+
+// 7 ── COCKPIT ─────────────────────────────────────────
+{ name: "Flight Deck", tag: "Aviation instrument panel", swatch: "#ff8f1f",
+  ui: { fg: "#e9e9e9", chrome: "rgba(30,32,35,.7)", accent: "#ff8f1f", btnfg: "#111", font: "Rajdhani, sans-serif", line: "rgba(255,255,255,.2)" },
+  reset() { this.n = 0; }, init() { this.reset(); },
+  gauge(g, cx, cy, R, val, label, big) {
+    const bz = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R); bz.addColorStop(0, "#5c6066"); bz.addColorStop(.5, "#1d1f22"); bz.addColorStop(1, "#46494e");
+    g.fillStyle = bz; g.beginPath(); g.arc(cx, cy, R * 1.1, 0, TAU); g.fill();
+    g.fillStyle = "#0c0d0e"; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.fill();
+    const A0 = Math.PI * 0.75, SW = Math.PI * 1.5;
+    [[20, 70, "#2fd16b"], [70, 85, "#ffd23f"], [85, 120, "#ff3b30"]].forEach(([a, b, c]) => {
+      g.strokeStyle = c; g.lineWidth = R * 0.05; g.beginPath(); g.arc(cx, cy, R * 0.8, arcAng(a, A0, SW), arcAng(b, A0, SW)); g.stroke(); });
+    for (let d = 20; d <= 120; d += big ? 2 : 5) {
+      const a = arcAng(d, A0, SW), M = d % 10 === 0; g.strokeStyle = "#eee"; g.lineWidth = M ? 2.4 : 1;
+      const r1 = R * (M ? 0.84 : 0.89); line(g, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1, cx + Math.cos(a) * R * 0.95, cy + Math.sin(a) * R * 0.95);
+      if (M && big) text(g, String(d / 10), cx + Math.cos(a) * R * 0.68, cy + Math.sin(a) * R * 0.68, `600 ${R * 0.13}px Rajdhani`, "#eee");
+    }
+    if (big) { text(g, label, cx, cy + R * 0.25, `600 ${R * 0.075}px Rajdhani`, "#aaa"); text(g, "dB × 10", cx, cy + R * 0.72, `500 ${R * 0.07}px Rajdhani`, "#777"); }
+    else text(g, label, cx, cy - R * 0.32, `700 ${R * 0.2}px Rajdhani`, "#bbb");
+    const a = arcAng(val == null ? MIN_DB : val, A0, SW);
+    g.save(); g.translate(cx, cy); g.rotate(a);
+    glow(g, "rgba(0,0,0,.8)", 6);
+    g.fillStyle = "#f2f2f2"; g.beginPath(); g.moveTo(-R * 0.18, -R * 0.03); g.lineTo(R * 0.7, -R * 0.018); g.lineTo(R * 0.7, R * 0.018); g.lineTo(-R * 0.18, R * 0.03); g.fill();
+    g.fillStyle = "#ff8f1f"; g.beginPath(); g.moveTo(R * 0.68, -R * 0.02); g.lineTo(R * 0.92, 0); g.lineTo(R * 0.68, R * 0.02); g.fill();
+    noGlow(g); g.restore();
+    const cg = g.createRadialGradient(cx - 3, cy - 3, 0, cx, cy, R * 0.1); cg.addColorStop(0, "#777"); cg.addColorStop(1, "#111");
+    g.fillStyle = cg; g.beginPath(); g.arc(cx, cy, R * 0.09, 0, TAU); g.fill();
+    const gl = g.createLinearGradient(cx, cy - R, cx, cy); gl.addColorStop(0, "rgba(255,255,255,.08)"); gl.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = gl; g.beginPath(); g.arc(cx, cy, R, Math.PI, TAU); g.fill();
+  },
+  draw(g, w, h, r, t, dt) {
+    const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, "#2a2d31"); bg.addColorStop(1, "#16181a");
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.fillStyle = "rgba(255,255,255,.025)"; for (let i = 0; i < 160; i++) { seed = i + 99; g.fillRect(rnd() * w, rnd() * h, 2, 2); }
+    // needle with slight lag
+    const tgt = S.db == null ? MIN_DB : S.db; this.n = this.n ? this.n + (tgt - this.n) * Math.min(1, dt * 9) : tgt;
+    const R = Math.min(r.w * 0.38, r.h * 0.26), cx = w / 2, cy = r.y + 34 + R * 1.25;
+    // instrument plate
+    g.fillStyle = "#1c1e21"; rrect(g, cx - R * 1.25, cy - R * 1.25, R * 2.5, R * 2.5, 18); g.fill();
+    g.strokeStyle = "rgba(255,255,255,.06)"; g.lineWidth = 1; g.stroke();
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const x = cx + sx * R * 1.1, y = cy + sy * R * 1.1;
+      g.fillStyle = "#3c3f44"; g.beginPath(); g.arc(x, y, 5, 0, TAU); g.fill(); g.strokeStyle = "#111"; g.lineWidth = 1.5; line(g, x - 3.5, y, x + 3.5, y); line(g, x, y - 3.5, x, y + 3.5); });
+    this.gauge(g, cx, cy, R, this.n, "SOUND PRESSURE", true);
+    // drum readout
+    const dw = R * 0.62, dh = R * 0.24, dy = cy + R * 0.38;
+    g.fillStyle = "#000"; rrect(g, cx - dw / 2, dy, dw, dh, 4); g.fill(); g.strokeStyle = "#555"; g.lineWidth = 1; g.stroke();
+    text(g, fmt(S.db, 1), cx, dy + dh / 2 + 1, `600 ${dh * 0.8}px 'Share Tech Mono'`, "#fff");
+    // sub gauges
+    const r2 = Math.min(R * 0.5, (r.y + r.h - (cy + R * 1.3)) * 0.42), y2 = cy + R * 1.3 + r2 * 1.25;
+    if (r2 > 26) { this.gauge(g, cx - R * 0.65, y2, r2, S.leq, "AVG", false); this.gauge(g, cx + R * 0.65, y2, r2, S.max, "MAX", false);
+      text(g, fmt(S.leq, 1), cx - R * 0.65, y2 + r2 * 0.5, `600 ${r2 * 0.26}px 'Share Tech Mono'`, "#ff8f1f");
+      text(g, fmt(S.max, 1), cx + R * 0.65, y2 + r2 * 0.5, `600 ${r2 * 0.26}px 'Share Tech Mono'`, "#ff8f1f"); }
+    // master caution
+    const warn = S.db != null && S.db >= 85, on = warn && Math.floor(t * 2.5) % 2;
+    const wx = r.x + r.w - 86, wy = r.y + 2;
+    g.fillStyle = on ? "#ffb000" : "#3a2c08"; rrect(g, wx, wy, 70, 26, 4); g.fill();
+    text(g, "CAUTION", wx + 35, wy + 14, "700 12px Rajdhani", on ? "#111" : "#7a5a12");
+    text(g, "T " + clock(S.elapsed), r.x + 16, wy + 14, "600 13px 'Share Tech Mono'", "#9aa", "left");
+  } },
+
+// 8 ── SEISMOGRAPH ─────────────────────────────────────────
+{ name: "Seismograph", tag: "Lab chart recorder", swatch: "#efe7d2",
+  ui: { fg: "#2a2420", chrome: "rgba(243,237,220,.8)", accent: "#1d3a8a", btnfg: "#fff", font: "'Special Elite', monospace", line: "rgba(0,0,0,.18)" },
+  draw(g, w, h, r, t) {
+    g.fillStyle = "#f2ecda"; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 400; i++) { seed = i * 7 + 3; g.fillStyle = `rgba(120,90,40,${rnd() * 0.06})`; g.fillRect(rnd() * w, rnd() * h, 2, 2); }
+    const px = r.x + 16, pw = r.w - 56, py = r.y + 58, ph = Math.max(140, r.h * 0.5);
+    const scroll = S.running ? (S.hist.length % 10) / 10 * (pw / (HIST - 1)) * 10 : 0;
+    for (let x = px + pw - scroll; x > px; x -= pw / 60) { g.strokeStyle = "rgba(200,70,60,.15)"; g.lineWidth = 1; line(g, x, py, x, py + ph); }
+    for (let d = 20; d <= 120; d += 5) { const y = py + ph - norm(d) * ph; g.strokeStyle = d % 20 === 0 ? "rgba(200,70,60,.35)" : "rgba(200,70,60,.15)"; g.lineWidth = 1; line(g, px, y, px + pw, y);
+      if (d % 20 === 0) text(g, String(d), px + pw + 6, y, "11px 'Special Elite'", "#a0473d", "left"); }
+    g.strokeStyle = "#a0473d"; g.lineWidth = 1.5; g.strokeRect(px, py, pw, ph);
+    text(g, "ACOUSTIC SEISMOGRAPH — STATION 01", px, r.y + 14, "15px 'Special Elite'", "#2a2420", "left");
+    const d = new Date();
+    text(g, d.toDateString().toUpperCase() + "  ·  " + d.toTimeString().slice(0, 8) + "  ·  RUN " + clock(S.elapsed), px, r.y + 36, "11px 'Special Elite'", "#6b5d4d", "left");
+    if (histPath(g, px, py, pw, ph)) { g.strokeStyle = "#1d3a8a"; g.lineWidth = 1.7; g.lineJoin = "round"; g.globalAlpha = .9; g.stroke(); g.globalAlpha = 1; }
+    // pen
+    const yv = py + ph - norm(S.db) * ph;
+    g.strokeStyle = "#555"; g.lineWidth = 2; line(g, px + pw, yv, px + pw + 34, yv - 18);
+    g.fillStyle = "#1d3a8a"; g.beginPath(); g.moveTo(px + pw, yv); g.lineTo(px + pw + 8, yv - 7); g.lineTo(px + pw + 10, yv - 2); g.fill();
+    // readings
+    const ry = py + ph + 50;
+    text(g, fmt(S.db, 1), px, ry, `${Math.min(r.w * 0.24, 96)}px 'Special Elite'`, "#2a2420", "left");
+    text(g, "dB", px + g.measureText(fmt(S.db, 1)).width + 8, ry + 10, "22px 'Special Elite'", "#6b5d4d", "left");
+    if (S.db != null && S.db >= 75) {
+      g.save(); g.translate(px + pw - 40, ry - 4); g.rotate(-0.15);
+      g.strokeStyle = "#c0281e"; g.lineWidth = 3; g.globalAlpha = .85; g.strokeRect(-62, -20, 124, 40);
+      text(g, S.db >= 85 ? "WARNING" : "NOTICE", 0, 1, "22px 'Special Elite'", "#c0281e"); g.restore(); g.globalAlpha = 1; }
+    const lines = [["MINIMUM", S.min], ["MAXIMUM", S.max], ["EQUIV. LEVEL", S.leq], ["CLASSIFICATION", null]];
+    lines.forEach(([k, v], i) => { const y = ry + 56 + i * 22; if (y > r.y + r.h) return;
+      text(g, k + " ".padEnd(2) + ".".repeat(16 - k.length) + "  " + (v == null && k === "CLASSIFICATION" ? status(S.db) : fmt(v, 1) + " dB"), px, y, "14px 'Special Elite'", "#2a2420", "left"); });
+  } },
+
+// 9 ── THERMAL ─────────────────────────────────────────
+{ name: "Thermal", tag: "Heat-vision spectrum scanner", swatch: "#ff6a00",
+  ui: { fg: "#ffd9a8", chrome: "rgba(20,8,0,.55)", accent: "#ff7a1a", btnfg: "#140600", font: "'Share Tech Mono', monospace", line: "rgba(255,122,26,.4)" },
+  init() { this.oc = document.createElement("canvas"); this.oc.width = NB; this.oc.height = 140; this.ox = this.oc.getContext("2d");
+    this.ox.fillStyle = "#000"; this.ox.fillRect(0, 0, NB, 140); this.acc = 0; },
+  reset() { this.init(); },
+  heat(v) { const stops = [[0, [0, 0, 0]], [.2, [40, 0, 90]], [.4, [150, 0, 140]], [.6, [235, 40, 40]], [.75, [255, 140, 0]], [.9, [255, 230, 60]], [1, [255, 255, 255]]];
+    v = clamp(v, 0, 1); for (let i = 1; i < stops.length; i++) if (v <= stops[i][0]) { const [a, ca] = stops[i - 1], [b, cb] = stops[i], k = (v - a) / (b - a);
+      return `rgb(${ca.map((c, j) => Math.round(lerp(c, cb[j], k))).join(",")})`; } return "#fff"; },
+  draw(g, w, h, r, t, dt) {
+    g.fillStyle = "#050302"; g.fillRect(0, 0, w, h);
+    this.acc += dt; if (this.acc > 0.04) { this.acc = 0;
+      this.ox.drawImage(this.oc, 0, 1); for (let i = 0; i < NB; i++) { this.ox.fillStyle = this.heat(S.bands[i] * (S.running ? 1 : 0)); this.ox.fillRect(i, 0, 1, 1); } }
+    const px = r.x + 16, pw = r.w - 52, py = r.y + 34, ph = Math.max(120, r.h * 0.5);
+    g.imageSmoothingEnabled = true; g.drawImage(this.oc, px, py, pw, ph);
+    g.fillStyle = "rgba(0,0,0,.18)"; for (let y = py; y < py + ph; y += 2) g.fillRect(px, y, pw, 1);
+    text(g, "THERMAL ACOUSTIC IMAGING", px, r.y + 12, "13px 'Share Tech Mono'", "#ffb070", "left");
+    text(g, "REC " + clock(S.elapsed), px + pw + 36, r.y + 12, "13px 'Share Tech Mono'", S.running && Math.floor(t * 2) % 2 ? "#ff3b30" : "#ffb070", "right");
+    // freq labels
+    [[100, "100"], [1000, "1k"], [10000, "10k"]].forEach(([f, l]) => { const x = px + Math.log(f / 40) / Math.log(16000 / 40) * pw;
+      g.strokeStyle = "rgba(255,255,255,.25)"; g.lineWidth = 1; line(g, x, py + ph, x, py + ph + 5); text(g, l + "Hz", x, py + ph + 14, "10px 'Share Tech Mono'", "#a87a50"); });
+    // reticle
+    const cx = px + pw / 2, cy = py + ph / 2, k = 26;
+    g.strokeStyle = "rgba(255,255,255,.8)"; g.lineWidth = 1.5; line(g, cx - k, cy, cx - 8, cy); line(g, cx + 8, cy, cx + k, cy); line(g, cx, cy - k, cx, cy - 8); line(g, cx, cy + 8, cx, cy + k);
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const x = cx + sx * 60, y = cy + sy * 40; g.beginPath(); g.moveTo(x, y - sy * 10); g.lineTo(x, y); g.lineTo(x - sx * 10, y); g.stroke(); });
+    // color scale
+    const sx = px + pw + 14, sg = g.createLinearGradient(0, py + ph, 0, py);
+    for (let i = 0; i <= 10; i++) sg.addColorStop(i / 10, this.heat(i / 10)); g.fillStyle = sg; g.fillRect(sx, py, 10, ph);
+    text(g, "HI", sx + 5, py - 8, "9px 'Share Tech Mono'", "#a87a50"); text(g, "LO", sx + 5, py + ph + 8, "9px 'Share Tech Mono'", "#a87a50");
+    // big number in heat color
+    const ny = py + ph + 30, col = this.heat(0.35 + norm(S.db) * 0.65), fs = Math.min(r.w * 0.26, 110);
+    glow(g, col, 20); text(g, fmt(S.db, 1), w / 2, ny + fs * 0.45, `${fs}px 'Share Tech Mono'`, col); noGlow(g);
+    text(g, "dB  ·  " + status(S.db), w / 2, ny + fs * 0.98, "13px 'Share Tech Mono'", "#ffb070");
+    const st = [["MIN", S.min], ["LEQ", S.leq], ["PEAK", S.peak], ["MAX", S.max]], bw = (r.w - 32) / 4, by = ny + fs * 1.18;
+    if (by + 30 < r.y + r.h) st.forEach(([k2, v], i) => { const x = r.x + 16 + i * bw + bw / 2;
+      text(g, k2, x, by, "10px 'Share Tech Mono'", "#a87a50"); text(g, fmt(v, 1), x, by + 18, "17px 'Share Tech Mono'", this.heat(0.4 + norm(v) * 0.6)); });
+  } },
+
+// 10 ── CHRONOGRAPH ─────────────────────────────────────────
+{ name: "Chronograph", tag: "Gold & black luxury dial", swatch: "#c9a24a",
+  ui: { fg: "#e8cf8e", chrome: "rgba(20,16,8,.6)", accent: "#d4ae5a", btnfg: "#140f05", font: "'Playfair Display', serif", line: "rgba(212,174,90,.45)" },
+  reset() { this.h = 0; }, init() { this.reset(); },
+  hand(g, cx, cy, a, len, wid, col, tail = 0.15) { g.save(); g.translate(cx, cy); g.rotate(a);
+    glow(g, "rgba(0,0,0,.7)", 8); g.shadowOffsetY = 3; g.fillStyle = col; g.beginPath();
+    g.moveTo(-len * tail, -wid / 2); g.lineTo(len * 0.85, -wid / 2); g.lineTo(len, 0); g.lineTo(len * 0.85, wid / 2); g.lineTo(-len * tail, wid / 2); g.fill();
+    g.shadowOffsetY = 0; noGlow(g); g.restore(); },
+  sub(g, x, y, R, v, label) {
+    g.fillStyle = "#111"; g.beginPath(); g.arc(x, y, R, 0, TAU); g.fill();
+    g.strokeStyle = "rgba(201,162,74,.55)"; g.lineWidth = 1;
+    for (let i = 0; i < 60; i++) { const a = i / 60 * TAU; g.globalAlpha = i % 5 ? 0.35 : 0.9; g.beginPath(); g.arc(x, y, R * 0.92 - (i % 5 ? 0 : 2), a, a + 0.01); g.stroke();
+      line(g, x + Math.cos(a) * R * (i % 5 ? 0.86 : 0.78), y + Math.sin(a) * R * (i % 5 ? 0.86 : 0.78), x + Math.cos(a) * R * 0.92, y + Math.sin(a) * R * 0.92); }
+    g.globalAlpha = 1;
+    text(g, label, x, y - R * 0.38, `600 ${R * 0.2}px Inter`, "#c9a24a");
+    text(g, fmt(v), x, y + R * 0.42, `500 ${R * 0.28}px 'Playfair Display'`, "#e8cf8e");
+    this.hand(g, x, y, -Math.PI / 2 + norm(v) * TAU, R * 0.8, 2.5, "#e8cf8e", 0.2);
+    g.fillStyle = "#c9a24a"; g.beginPath(); g.arc(x, y, 3, 0, TAU); g.fill();
+  },
+  draw(g, w, h, r, t, dt) {
+    const bg = g.createRadialGradient(w / 2, h * 0.4, 0, w / 2, h * 0.4, h * 0.7); bg.addColorStop(0, "#1f1a12"); bg.addColorStop(1, "#050403");
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    const R = Math.min(r.w * 0.44, r.h * 0.38), cx = w / 2, cy = r.y + r.h * 0.46;
+    // lugs + case
+    const gold = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+    gold.addColorStop(0, "#f7e3a3"); gold.addColorStop(.3, "#9a7430"); gold.addColorStop(.55, "#f2d68a"); gold.addColorStop(.8, "#7d5c22"); gold.addColorStop(1, "#e9cf87");
+    g.fillStyle = gold; [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { rrect(g, cx + sx * R * 0.55 - R * 0.13, cy + sy * R * 1.08 - R * 0.14, R * 0.26, R * 0.28, 6); g.fill(); });
+    g.beginPath(); g.arc(cx, cy, R * 1.1, 0, TAU); g.fill();
+    // crown
+    g.fillStyle = gold; rrect(g, cx + R * 1.08, cy - R * 0.09, R * 0.12, R * 0.18, 3); g.fill();
+    // bezel graduations
+    g.fillStyle = "#0b0b0b"; g.beginPath(); g.arc(cx, cy, R * 1.02, 0, TAU); g.fill();
+    for (let i = 0; i < 120; i++) { const a = -Math.PI / 2 + i / 120 * TAU; g.strokeStyle = "#c9a24a"; g.lineWidth = i % 10 ? 0.8 : 2;
+      line(g, cx + Math.cos(a) * R * (i % 10 ? 0.97 : 0.94), cy + Math.sin(a) * R * (i % 10 ? 0.97 : 0.94), cx + Math.cos(a) * R * 1.0, cy + Math.sin(a) * R * 1.0); }
+    // dial with sunburst
+    const dial = g.createRadialGradient(cx, cy - R * 0.2, 0, cx, cy, R * 0.92); dial.addColorStop(0, "#1c1c1e"); dial.addColorStop(1, "#060606");
+    g.fillStyle = dial; g.beginPath(); g.arc(cx, cy, R * 0.92, 0, TAU); g.fill();
+    g.save(); g.beginPath(); g.arc(cx, cy, R * 0.92, 0, TAU); g.clip();
+    for (let i = 0; i < 180; i++) { const a = i / 180 * TAU + t * 0.02; g.strokeStyle = `rgba(255,240,200,${i % 2 ? 0.018 : 0.035})`; g.lineWidth = 1; line(g, cx, cy, cx + Math.cos(a) * R, cy + Math.sin(a) * R); }
+    const sh = g.createLinearGradient(cx - R, cy - R, cx + R, cy + R); sh.addColorStop(0, "rgba(255,230,170,.08)"); sh.addColorStop(.5, "rgba(255,230,170,0)"); sh.addColorStop(1, "rgba(255,230,170,.05)");
+    g.fillStyle = sh; g.fillRect(cx - R, cy - R, R * 2, R * 2); g.restore();
+    // applied indices: 0–120 dB around the dial, 10 dB per "hour"
+    for (let i = 0; i < 12; i++) { const a = -Math.PI / 2 + i / 12 * TAU; if (i === 3 || i === 6 || i === 9) continue;
+      g.save(); g.translate(cx + Math.cos(a) * R * 0.8, cy + Math.sin(a) * R * 0.8); g.rotate(a);
+      g.fillStyle = gold; const L = i === 0 ? R * 0.14 : R * 0.1, W = i === 0 ? R * 0.05 : R * 0.03; rrect(g, -L / 2, -W / 2, L, W, 2); g.fill(); g.restore(); }
+    text(g, "120", cx, cy - R * 0.6, `700 ${R * 0.09}px 'Playfair Display'`, "#e8cf8e");
+    text(g, "DÉCIBEL", cx, cy - R * 0.44, `500 ${R * 0.075}px 'Playfair Display'`, "#e8cf8e");
+    text(g, "CHRONOMÈTRE ACOUSTIQUE", cx, cy - R * 0.35, `600 ${R * 0.035}px Inter`, "#a08040");
+    // subdials 9 / 3 / 6
+    const sr = R * 0.19; this.sub(g, cx - R * 0.46, cy, sr, S.min, "MIN"); this.sub(g, cx + R * 0.46, cy, sr, S.max, "MAX"); this.sub(g, cx, cy + R * 0.46, sr, S.leq, "AVG");
+    // date window = live value
+    g.fillStyle = "#f3eee2"; rrect(g, cx + R * 0.52, cy + R * 0.34, R * 0.2, R * 0.12, 2); g.fill(); g.strokeStyle = gold; g.lineWidth = 2; g.stroke();
+    text(g, fmt(S.db), cx + R * 0.62, cy + R * 0.405, `700 ${R * 0.08}px Inter`, "#111");
+    // hands
+    this.h = this.h + ((S.db == null ? 0 : norm(S.db) * 120) - this.h) * Math.min(1, dt * 6);
+    const a = -Math.PI / 2 + this.h / 120 * TAU;
+    this.hand(g, cx, cy, a, R * 0.86, R * 0.045, gold, 0.18);
+    // lume strip
+    g.save(); g.translate(cx, cy); g.rotate(a); g.fillStyle = "rgba(220,255,230,.85)"; g.fillRect(R * 0.25, -R * 0.01, R * 0.5, R * 0.02); g.restore();
+    if (S.peak != null) this.hand(g, cx, cy, -Math.PI / 2 + norm(S.peak) * TAU, R * 0.9, 1.5, "#c0281e", 0.25);
+    g.fillStyle = gold; g.beginPath(); g.arc(cx, cy, R * 0.04, 0, TAU); g.fill(); g.fillStyle = "#c0281e"; g.beginPath(); g.arc(cx, cy, R * 0.015, 0, TAU); g.fill();
+    // crystal
+    const cr = g.createLinearGradient(cx - R, cy - R, cx, cy); cr.addColorStop(0, "rgba(255,255,255,.12)"); cr.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = cr; g.beginPath(); g.arc(cx, cy, R * 0.92, Math.PI, Math.PI * 1.5); g.lineTo(cx, cy); g.fill();
+    text(g, status(S.db), cx, cy + R * 1.38, `italic 500 16px 'Playfair Display'`, "#e8cf8e");
+  } },
+];
+
+// ───────────────────────── canvas + loop ─────────────────────────
+const cv = $("c"), g = cv.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+function resize() { DPR = Math.min(3, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); }
+addEventListener("resize", resize); resize();
+themes.forEach(th => th.init && th.init());
+
+let cur = clamp(store.get("theme", 0), 0, themes.length - 1);
+function setTheme(i) {
+  cur = (i + themes.length) % themes.length; store.set("theme", cur);
+  const th = themes[cur], u = th.ui, st = document.documentElement.style;
+  st.setProperty("--fg", u.fg); st.setProperty("--chrome", u.chrome); st.setProperty("--accent", u.accent);
+  st.setProperty("--btnfg", u.btnfg); st.setProperty("--font", u.font); st.setProperty("--line", u.line);
+  $("tname").textContent = th.name; $("ttag").textContent = th.tag;
+  $("dots").innerHTML = themes.map((_, k) => `<i class="${k === cur ? "on" : ""}"></i>`).join("");
+  [...$("themeGrid").children].forEach((b, k) => b.classList.toggle("on", k === cur));
+  document.querySelector('meta[name=theme-color]').content = cur === 5 || cur === 7 ? "#f2ecda" : "#000";
+}
+function layoutRect() {
+  const tb = $("top").getBoundingClientRect().bottom, bb = $("bot").getBoundingClientRect().top;
+  return { x: 0, y: tb + 6, w: W, h: Math.max(200, bb - tb - 12) };
+}
+let last = performance.now(), fade = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  sample(now, dt);
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  g.save();
+  try { themes[cur].draw(g, W, H, layoutRect(), now / 1000, dt); } catch (e) { console.error(e); }
+  g.restore();
+  if (fade > 0) { g.fillStyle = `rgba(0,0,0,${fade})`; g.fillRect(0, 0, W, H); fade = Math.max(0, fade - dt * 4); }
+  requestAnimationFrame(frame);
+}
+
+// ───────────────────────── controls ─────────────────────────
+function go(d) { fade = 0.6; setTheme(cur + d); $("hint").style.opacity = 0; }
+$("prev").onclick = () => go(-1); $("next").onclick = () => go(1);
+$("go").onclick = () => S.running ? stop() : start();
+$("rst").onclick = reset;
+let tx = null, ty = null;
+cv.addEventListener("touchstart", e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
+cv.addEventListener("touchend", e => { if (tx == null) return; const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1); tx = null; }, { passive: true });
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); if (e.key === " ") $("go").click(); });
+// settings
+$("gear").onclick = () => $("sheet").classList.add("open");
+$("close").onclick = () => $("sheet").classList.remove("open");
+$("themeGrid").innerHTML = themes.map((th, k) => `<button style="background:${th.swatch};color:${["#f2f2ef", "#efe7d2", "#33ff77", "#29e6ff", "#e8c46a"].includes(th.swatch) ? "#111" : "#fff"}" data-k="${k}">${k + 1}</button>`).join("");
+$("themeGrid").onclick = e => { const k = e.target.dataset.k; if (k != null) { fade = 0.6; setTheme(+k); } };
+$("offset").value = S.offset; $("offv").textContent = "+" + S.offset;
+$("offset").oninput = e => { S.offset = +e.target.value; $("offv").textContent = "+" + S.offset; store.set("offset", S.offset); };
+const setResp = v => { S.resp = v; store.set("resp", v); [...$("resp").children].forEach(b => b.classList.toggle("on", b.dataset.v === v)); };
+$("resp").onclick = e => e.target.dataset.v && setResp(e.target.dataset.v); setResp(S.resp);
+document.addEventListener("visibilitychange", async () => { if (!document.hidden && S.running) { try { wakeLock = await navigator.wakeLock?.request("screen"); } catch (e) {} } });
+if (store.get("seenHint", false)) $("hint").style.opacity = 0; else { store.set("seenHint", true); setTimeout(() => $("hint").style.opacity = 0, 5000); }
+
+setTheme(cur);
+if (demo) { const m = location.search.match(/theme=(\d+)/); if (m) setTheme(+m[1] - 1); start(); }
+requestAnimationFrame(frame);
 })();
 </script>
 </body>
