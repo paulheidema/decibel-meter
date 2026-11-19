@@ -48,7 +48,7 @@
   #sheet h3 { margin:0 0 16px; font-size:17px; display:flex; justify-content:space-between; align-items:center; }
   #sheet h3 button { background:none; border:0; color:#8ab4ff; font-size:16px; font-weight:600; cursor:pointer; }
   .row { display:flex; align-items:center; gap:12px; margin:14px 0; font-size:14px; }
-  .row label { width:92px; color:#aaa; }
+  .row label { width:110px; color:#aaa; }
   .row input[type=range] { flex:1; accent-color:#8ab4ff; }
   .row b { min-width:44px; text-align:right; font-variant-numeric:tabular-nums; }
   .seg { display:flex; flex:1; background:#2a2a2e; border-radius:10px; padding:3px; }
@@ -93,11 +93,12 @@
   <div class="row"><label>Theme</label></div>
   <div class="themes" id="themeGrid"></div>
   <div class="row"><label>Mode</label><div class="seg" id="mode2"><button data-v="meter">Meter</button><button data-v="voice">Voice</button><button data-v="game">Game</button></div></div>
-  <div class="row"><label>Phone is</label><div class="seg" id="dist"><button data-v="near">Near speaker</button><button data-v="far">Across room</button></div></div>
+  <div class="row"><label>Too quiet below</label><input type="range" id="qlo" min="10" max="60" step="1"><b id="qlov"></b></div>
+  <div class="row"><label>Too loud above</label><input type="range" id="qhi" min="35" max="100" step="1"><b id="qhiv"></b></div>
   <div class="row"><label>Calibration</label><input type="range" id="offset" min="60" max="130" step="1"><b id="offv"></b></div>
   <div class="row"><label>Response</label><div class="seg" id="resp"><button data-v="fast">Fast</button><button data-v="slow">Slow</button></div></div>
   <p class="note">Fast (125 ms) follows quick sounds like claps; Slow (1 s) gives a steadier reading. Phone mics are estimates
-    (about ±5 dB). Voice Coach: choose "Near speaker" when the phone is about an arm's length away, or "Across room" when it sits where the listeners are. Compare with a known meter and move Calibration until they match. Settings are saved on this phone.</p>
+    (about ±5 dB). Voice and Game: have her speak normally, then shout, and set the two cut-offs to match her voice on your phone. Compare with a known meter and move Calibration until they match. Settings are saved on this phone.</p>
 </div>
 
 <div id="err"></div>
@@ -120,14 +121,26 @@ const status = d => S.mode === "voice" ? (S.voice == null ? "LISTENING" : VZ[vZo
   d < 75 ? "CONVERSATION" : d < 85 ? "LOUD" : d < 100 ? "VERY LOUD" : "DANGEROUS";
 // Voice Coach zones (dB at about 1 m from the speaker; "across room" shifts down 10 dB)
 const VZ = [
-  { k: "TOO QUIET",        sub: "People can't hear you",          c: "#5b8cff" },
-  { k: "A BIT QUIET",      sub: "Speak up a little",              c: "#ffc940" },
-  { k: "GOOD",             sub: "People near you can hear",       c: "#3ddc84" },
-  { k: "BACK OF THE ROOM", sub: "Everyone can hear you clearly",  c: "#00e0a0" },
-  { k: "TOO LOUD",         sub: "That's shouting, ease off",      c: "#ff3b4e" },
+  { k: "TOO QUIET",     sub: "People can't hear you, speak up", c: "#5b8cff" },
+  { k: "SPEAKING WELL", sub: "Everyone can hear you clearly",   c: "#3ddc84" },
+  { k: "TOO LOUD",      sub: "That's shouting, ease off",       c: "#ff3b4e" },
 ];
-const vEdges = () => { const o = S.dist === "far" ? -10 : 0; return [50 + o, 58 + o, 66 + o, 80 + o]; };
-const vZone = d => { if (d == null) return -1; const e = vEdges(); let i = 0; while (i < 4 && d >= e[i]) i++; return i; };
+const vEdges = () => [S.qlo, S.qhi];
+const vZone = d => d == null ? -1 : d < S.qlo ? 0 : d <= S.qhi ? 1 : 2;
+function zoneStrip(g, sx, sy, sw, sh, z, labSize, labGap) {
+  const [q, l] = vEdges(), bounds = [q - 12, q, l, l + 12], wt = [1, 3, 1], xs = [sx];
+  for (let i = 0; i < 3; i++) xs.push(xs[i] + sw * wt[i] / 5);
+  const labs = ["Too quiet", "Speaking well", "Too loud"];
+  for (let i = 0; i < 3; i++) { g.fillStyle = VZ[i].c; g.globalAlpha = i === z ? 1 : 0.45; if (i === z) glow(g, VZ[i].c, 14);
+    rrect(g, xs[i] + 2, sy, xs[i + 1] - xs[i] - 4, sh, Math.min(10, sh / 2)); g.fill(); noGlow(g); g.globalAlpha = 1;
+    const lp = fitFont(g, labs[i], 800, labSize, xs[i + 1] - xs[i] - 6);
+    text(g, labs[i], (xs[i] + xs[i + 1]) / 2, sy + sh + labGap, `800 ${lp}px -apple-system, Inter, sans-serif`, i === z ? "#ffffff" : "#c3c9d0"); }
+  [[xs[1], q], [xs[2], l]].forEach(([x, v]) => text(g, String(v), x, sy - 10, `800 ${Math.max(11, Math.round(labSize * 0.8))}px -apple-system, Inter, sans-serif`, "#ffffff"));
+  if (S.voice != null) { const d = S.voice, i = d < q ? 0 : d <= l ? 1 : 2;
+    const mx = xs[i] + (xs[i + 1] - xs[i]) * clamp((d - bounds[i]) / (bounds[i + 1] - bounds[i]), 0, 1);
+    g.fillStyle = "#fff"; g.strokeStyle = "#000"; g.lineWidth = 3; glow(g, "rgba(0,0,0,.8)", 10);
+    rrect(g, mx - 5, sy - 6, 10, sh + 12, 5); g.stroke(); g.fill(); noGlow(g); }
+}
 const levelColor = d => d == null ? "#666" : d < 60 ? "#3ddc84" : d < 75 ? "#c6e34a" : d < 85 ? "#ffc940" : d < 100 ? "#ff8a3d" : "#ff3b4e";
 // seeded random for stable decorations
 let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
@@ -138,7 +151,7 @@ const S = {
   db: null, raw: null, peak: null, peakT: 0, min: null, max: null, leq: null, eSum: 0, eN: 0,
   hist: [], bands: new Float32Array(NB), wave: new Float32Array(256),
   running: false, t0: 0, elapsed: 0, offset: store.get("offset", 100), resp: store.get("resp", "fast"),
-  mode: store.get("mode", "meter"), dist: store.get("dist", "near"), voice: null
+  mode: store.get("mode", "meter"), qlo: store.get("qlo", 30), qhi: store.get("qhi", 55), voice: null
 };
 const demo = /[?&]demo/.test(location.search);
 
@@ -200,7 +213,7 @@ function sample(now, dt) {
   let dbfs;
   if (demo) {
     const t = now / 1000;
-    const spl = 62 + 14 * Math.sin(t * 0.6) + 7 * Math.sin(t * 2.1) + 4 * Math.sin(t * 5.3) + Math.random() * 3;
+    const spl = 44 + 14 * Math.sin(t * 0.6) + 7 * Math.sin(t * 2.1) + 4 * Math.sin(t * 5.3) + Math.random() * 3;
     const lv = norm(spl);
     for (let i = 0; i < NB; i++) S.bands[i] = clamp(0.15 + 0.6 * Math.exp(-((i - 14) ** 2) / 90) * (0.6 + 0.4 * Math.sin(t * 2 + i * 0.4)) + Math.random() * 0.12 + lv * 0.25 - 0.1, 0, 1);
     for (let i = 0; i < S.wave.length; i++) S.wave[i] = (Math.sin(i * 0.25 + t * 9) * 0.5 + Math.sin(i * 0.9 + t * 13) * 0.25 + (Math.random() - .5) * 0.2) * lv * 0.25;
@@ -833,19 +846,7 @@ function drawVoice(g, W, H) {
   glow(g, Z.c, 20); text(g, Z.k, x + pw / 2, y + ph * 0.2, `900 ${hp}px -apple-system, Inter, sans-serif`, Z.c); noGlow(g);
   const sp = fitFont(g, Z.sub, 700, ph * 0.1, pw - 40);
   text(g, Z.sub, x + pw / 2, y + ph * 0.2 + hp * 0.5 + sp * 0.9, `700 ${sp}px -apple-system, Inter, sans-serif`, "#ffffff");
-  // zone strip: five equal sections, marker placed proportionally inside its zone
-  const e = vEdges(), bounds = [e[0] - 12, ...e, e[3] + 10], sx = x + 16, sw = pw - 32, seg = sw / 5, shh = ph * 0.17, sy = y + ph - shh - ph * 0.17;
-  const X = d => { if (d <= bounds[0]) return sx; for (let i = 0; i < 5; i++) if (d < bounds[i + 1]) return sx + seg * (i + (d - bounds[i]) / (bounds[i + 1] - bounds[i])); return sx + sw; };
-  const labs = ["Too quiet", "Quiet", "Good", "Back row", "Too loud"];
-  for (let i = 0; i < 5; i++) { g.fillStyle = VZ[i].c; g.globalAlpha = i === z ? 1 : 0.5;
-    if (i === z) glow(g, VZ[i].c, 16);
-    rrect(g, sx + i * seg + 2, sy, seg - 4, shh, 10); g.fill(); noGlow(g); g.globalAlpha = 1;
-    const lp = fitFont(g, labs[i], 800, Math.max(14, ph * 0.065), seg - 4);
-    text(g, labs[i], sx + i * seg + seg / 2, sy + shh + ph * 0.085, `800 ${lp}px -apple-system, Inter, sans-serif`, i === z ? "#ffffff" : "#c3c9d0"); }
-  if (S.voice != null) { const mx = X(S.voice), m = ph * 0.075;
-    g.fillStyle = "#fff"; g.strokeStyle = "#000"; g.lineWidth = 3; glow(g, "rgba(0,0,0,.8)", 10);
-    g.beginPath(); g.moveTo(mx, sy + 2); g.lineTo(mx - m, sy - m * 1.4); g.lineTo(mx + m, sy - m * 1.4); g.closePath(); g.stroke(); g.fill();
-    rrect(g, mx - 4, sy - 4, 8, shh + 8, 4); g.stroke(); g.fill(); noGlow(g); }
+  zoneStrip(g, x + 16, y + ph - ph * 0.36, pw - 32, ph * 0.17, z, Math.max(15, ph * 0.075), ph * 0.085);
   g.restore();
 }
 // ───────────────────────── GAME MODE: Pip's Voice Quest ─────────────────────────
@@ -874,14 +875,14 @@ const game = {
     if (S.running && !this.wasRunning && this.p === 0) this.say("GO PIP, GO!", "#3ddc84");
     this.wasRunning = S.running;
     let target = 0;
-    if (this.st !== "fall" && S.running && z > 0) target = [0, 120, 215, 245, 390][z];
+    if (this.st !== "fall" && S.running && z > 0) target = [0, 225, 390][z];
     this.speed = lerp(this.speed, target, Math.min(1, dt * (target > this.speed ? 3 : 6)));
     this.p += this.speed * dt;
     if (this.st === "fall") { this.stT -= dt; if (this.stT <= 0) this.st = "idle"; }
     else if (this.speed < 18) { this.quietT += dt; this.st = S.running && this.quietT > 0.7 ? "grumpy" : "idle"; }
-    else { this.quietT = 0; this.st = z === 4 ? "wild" : "run"; }
-    if (z === 2 || z === 3) this.combo += dt; else if (z === 0 || z === 4) this.combo = Math.max(0, this.combo - dt * 4);
-    this.mult = 1 + Math.min(4, Math.floor(this.combo / 6)) + (z === 3 ? 1 : 0);
+    else { this.quietT = 0; this.st = z === 2 ? "wild" : "run"; }
+    if (z === 1) this.combo += dt; else if (z === 0 || z === 2) this.combo = Math.max(0, this.combo - dt * 4);
+    this.mult = 1 + Math.min(5, Math.floor(this.combo / 6));
     // physics
     this.vy -= 1900 * dt; this.hy += this.vy * dt;
     if (this.hy <= 0) { this.hy = 0; this.vy = 0; this.ground = true; }
@@ -1038,18 +1039,12 @@ const game = {
     text(g, String(this.coins), W - 78, top + 33, "900 26px -apple-system, Inter, sans-serif", "#fff", "left");
     text(g, "BEST " + this.best, W - 26, top + 54, "700 11px -apple-system, Inter, sans-serif", "#cfd6de", "right");
     // voice bar
-    const vy = top + 74, vh = 92, Zc = z < 0 ? { k: S.running ? "LISTENING…" : "READY", c: "#9aa3ad" } : VZ[z];
+    const vy = top + 74, vh = 106, Zc = z < 0 ? { k: S.running ? "LISTENING…" : "READY", c: "#9aa3ad" } : VZ[z];
     g.fillStyle = "rgba(0,0,0,.6)"; rrect(g, 10, vy, W - 20, vh, 18); g.fill(); g.strokeStyle = Zc.c; g.lineWidth = 4; g.stroke();
-    const lab = z === 2 || z === 3 ? (z === 3 ? "BACK ROW! ×BONUS" : "GOOD VOICE!") : Zc.k;
+    const lab = z === 1 ? (this.mult > 1 ? "GREAT VOICE! ×" + this.mult : "GREAT VOICE!") : Zc.k;
     const fp = fitFont(g, lab, 900, 30, W - 60);
     text(g, lab, W / 2, vy + 26, `900 ${fp}px -apple-system, Inter, sans-serif`, Zc.c);
-    const e = vEdges(), bounds = [e[0] - 12, ...e, e[3] + 10], sx0 = 26, sw = W - 52, seg = sw / 5, sy = vy + 50, sh = 20;
-    for (let i = 0; i < 5; i++) { g.fillStyle = VZ[i].c; g.globalAlpha = i === z ? 1 : 0.45; rrect(g, sx0 + i * seg + 2, sy, seg - 4, sh, 7); g.fill(); g.globalAlpha = 1;
-      const l = ["Too quiet", "Quiet", "Good", "Back row", "Too loud"][i], lp = fitFont(g, l, 800, 12, seg - 4);
-      text(g, l, sx0 + i * seg + seg / 2, sy + sh + 11, `800 ${lp}px -apple-system, Inter, sans-serif`, "#fff"); }
-    if (S.voice != null) { let mx = sx0 + sw; const d = S.voice;
-      if (d <= bounds[0]) mx = sx0; else for (let i = 0; i < 5; i++) if (d < bounds[i + 1]) { mx = sx0 + seg * (i + (d - bounds[i]) / (bounds[i + 1] - bounds[i])); break; }
-      g.fillStyle = "#fff"; g.strokeStyle = "#000"; g.lineWidth = 2.5; rrect(g, mx - 4, sy - 5, 8, sh + 10, 4); g.stroke(); g.fill(); }
+    zoneStrip(g, 26, vy + 62, W - 52, 20, z, 13, 12);
     // big centre flash
     if (this.flashT > 0 && this.flash) { const a = clamp(this.flashT / 0.4, 0, 1), sc = 1 + (1.6 - this.flashT) * 0.15;
       g.save(); g.globalAlpha = a; g.translate(W / 2, top + H2 * 0.38); g.scale(sc, sc);
@@ -1061,7 +1056,7 @@ const game = {
       g.fillStyle = "rgba(10,10,20,.88)"; rrect(g, cx, cy, cw, ch, 24); g.fill(); g.strokeStyle = "#ffd23f"; g.lineWidth = 4; g.stroke();
       text(g, "PIP'S VOICE QUEST", W / 2, cy + 38, `900 ${fitFont(g, "PIP'S VOICE QUEST", 900, 30, cw - 30)}px -apple-system, Inter, sans-serif`, "#ffd23f");
       text(g, "Tap START, then talk to make Pip run!", W / 2, cy + 72, `700 ${fitFont(g, "Tap START, then talk to make Pip run!", 700, 16, cw - 30)}px -apple-system, Inter, sans-serif`, "#fff");
-      [["#5b8cff", "Too quiet", "Pip stops and grumbles"], ["#3ddc84", "Good / Back row", "Pip runs, jumps & scores"], ["#ff3b4e", "Too loud", "Pip trips and falls"]].forEach(([c, a, b], i) => {
+      [["#5b8cff", "Too quiet", "Pip stops and grumbles"], ["#3ddc84", "Speaking well", "Pip runs, jumps & scores"], ["#ff3b4e", "Too loud", "Pip trips and falls"]].forEach(([c, a, b], i) => {
         const yy = cy + 112 + i * 52; g.fillStyle = c; rrect(g, cx + 22, yy - 16, 32, 32, 9); g.fill();
         text(g, a, cx + 68, yy - 8, "800 16px -apple-system, Inter, sans-serif", c, "left");
         text(g, b, cx + 68, yy + 11, "600 14px -apple-system, Inter, sans-serif", "#fff", "left"); });
@@ -1106,8 +1101,10 @@ $("offset").oninput = e => { S.offset = +e.target.value; $("offv").textContent =
 const setResp = v => { S.resp = v; store.set("resp", v); [...$("resp").children].forEach(b => b.classList.toggle("on", b.dataset.v === v)); };
 const setMode = v => { S.mode = v; store.set("mode", v); $("top").style.visibility = v === "game" ? "hidden" : ""; if (v === "game") $("hint").style.opacity = 0; ["mode", "mode2"].forEach(id => [...$(id).children].forEach(b => b.classList.toggle("on", b.dataset.v === v))); };
 $("mode").onclick = $("mode2").onclick = e => e.target.dataset.v && setMode(e.target.dataset.v); setMode(S.mode);
-const setDist = v => { S.dist = v; store.set("dist", v); [...$("dist").children].forEach(b => b.classList.toggle("on", b.dataset.v === v)); };
-$("dist").onclick = e => e.target.dataset.v && setDist(e.target.dataset.v); setDist(S.dist);
+const syncQ = () => { $("qlo").value = S.qlo; $("qhi").value = S.qhi; $("qlov").textContent = S.qlo + " dB"; $("qhiv").textContent = S.qhi + " dB"; };
+$("qlo").oninput = e => { S.qlo = Math.min(+e.target.value, S.qhi - 5); store.set("qlo", S.qlo); syncQ(); };
+$("qhi").oninput = e => { S.qhi = Math.max(+e.target.value, S.qlo + 5); store.set("qhi", S.qhi); syncQ(); };
+syncQ();
 if (/[?&]voice/.test(location.search)) setMode("voice");
 if (/[?&]game/.test(location.search)) setMode("game");
 $("resp").onclick = e => e.target.dataset.v && setResp(e.target.dataset.v); setResp(S.resp);
