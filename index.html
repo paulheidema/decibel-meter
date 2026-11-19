@@ -427,7 +427,7 @@ const themes = [
     // needle physics (spring + damping for real overshoot)
     const target = norm(S.db); this.vel += (target - this.pos) * 180 * dt; this.vel *= Math.exp(-14 * dt); this.pos += this.vel * dt;
     const pos = clamp(this.pos, -0.03, 1.03);
-    const fw = Math.min(r.w - 32, 420), fh = fw * 0.66, fx = (w - fw) / 2, fy = r.y + 20;
+    const fw = Math.max(200, Math.min(r.w - 32, 420, (r.h - 200) / 0.66)), fh = fw * 0.66, fx = (w - fw) / 2, fy = r.y + 20;
     // bezel
     const bz = g.createLinearGradient(0, fy - 14, 0, fy + fh + 14); bz.addColorStop(0, "#d9d9d9"); bz.addColorStop(.5, "#6d6d6d"); bz.addColorStop(1, "#c8c8c8");
     g.fillStyle = bz; rrect(g, fx - 12, fy - 12, fw + 24, fh + 24, 18); g.fill();
@@ -811,28 +811,39 @@ function setTheme(i) {
   document.querySelector('meta[name=theme-color]').content = themes[cur].name === "Pure" || themes[cur].name === "Seismograph" ? "#f2ecda" : "#000";
 }
 function layoutRect() {
-  const tb = $("top").getBoundingClientRect().bottom, bb = $("mode").getBoundingClientRect().top - (S.mode === "voice" ? 142 : 0);
+  const tb = $("top").getBoundingClientRect().bottom, bb = $("mode").getBoundingClientRect().top - (S.mode === "voice" ? VH() + 16 : 0);
   return { x: 0, y: tb + 6, w: W, h: Math.max(200, bb - tb - 12) };
 }
+const VH = () => Math.min(300, Math.max(230, H * 0.3));   // Voice Coach banner height
+function fitFont(g, str, weight, maxPx, maxW) { let px = maxPx; g.font = `${weight} ${px}px -apple-system, Inter, sans-serif`;
+  while (px > 14 && g.measureText(str).width > maxW) { px -= 2; g.font = `${weight} ${px}px -apple-system, Inter, sans-serif`; } return px; }
 function drawVoice(g, W, H) {
-  const bb = $("mode").getBoundingClientRect().top, ph = 132, pw = Math.min(W - 24, 460), x = (W - pw) / 2, y = bb - ph - 10;
+  const bb = $("mode").getBoundingClientRect().top, ph = VH(), pw = W - 20, x = 10, y = bb - ph - 10;
   const z = vZone(S.voice), Z = z < 0 ? { k: S.running ? "LISTENING…" : "TAP START", sub: "Then speak normally", c: "#9aa3ad" } : VZ[z];
   g.save();
-  g.fillStyle = "rgba(8,8,10,.9)"; rrect(g, x, y, pw, ph, 20); g.fill();
-  g.strokeStyle = Z.c; g.lineWidth = 3; glow(g, Z.c, 18); g.stroke(); noGlow(g);
-  text(g, Z.k, x + pw / 2, y + 28, "800 26px -apple-system, Inter, sans-serif", Z.c);
-  text(g, Z.sub, x + pw / 2, y + 56, "600 16px -apple-system, Inter, sans-serif", "#ffffff");
-  // zone strip
-  const e = vEdges(), lo = e[0] - 12, hi = e[3] + 10, sx = x + 18, sw = pw - 36, sy = y + 80, shh = 16;
-  const X = d => sx + clamp((d - lo) / (hi - lo), 0, 1) * sw, bounds = [lo, ...e, hi];
-  for (let i = 0; i < 5; i++) { g.fillStyle = VZ[i].c; g.globalAlpha = i === z ? 1 : 0.45;
-    rrect(g, X(bounds[i]) + 1.5, sy, X(bounds[i + 1]) - X(bounds[i]) - 3, shh, 6); g.fill(); }
-  g.globalAlpha = 1;
-  ["Quiet", "Good", "Back of room", "Loud"].forEach((l, i) => { const d = [ (lo + e[0]) / 2, (e[1] + e[2]) / 2, (e[2] + e[3]) / 2, (e[3] + hi) / 2 ][i];
-    text(g, l, X(d), sy + shh + 15, "600 12px -apple-system, Inter, sans-serif", "#c9d0d8"); });
-  if (S.voice != null) { const mx = X(S.voice);
-    g.fillStyle = "#fff"; glow(g, "#fff", 8); g.beginPath(); g.moveTo(mx, sy - 2); g.lineTo(mx - 9, sy - 14); g.lineTo(mx + 9, sy - 14); g.fill();
-    g.fillRect(mx - 2, sy - 2, 4, shh + 4); noGlow(g); }
+  // panel tinted with the zone colour so the whole block reads at a glance
+  g.fillStyle = "rgba(6,6,8,.94)"; rrect(g, x, y, pw, ph, 26); g.fill();
+  const tint = g.createLinearGradient(0, y, 0, y + ph); tint.addColorStop(0, Z.c + "55"); tint.addColorStop(1, Z.c + "10");
+  g.fillStyle = tint; g.fill();
+  g.strokeStyle = Z.c; g.lineWidth = 6; glow(g, Z.c, 28); g.stroke(); noGlow(g);
+  // headline
+  const hp = fitFont(g, Z.k, 900, ph * 0.26, pw - 40);
+  glow(g, Z.c, 20); text(g, Z.k, x + pw / 2, y + ph * 0.2, `900 ${hp}px -apple-system, Inter, sans-serif`, Z.c); noGlow(g);
+  const sp = fitFont(g, Z.sub, 700, ph * 0.1, pw - 40);
+  text(g, Z.sub, x + pw / 2, y + ph * 0.2 + hp * 0.5 + sp * 0.9, `700 ${sp}px -apple-system, Inter, sans-serif`, "#ffffff");
+  // zone strip: five equal sections, marker placed proportionally inside its zone
+  const e = vEdges(), bounds = [e[0] - 12, ...e, e[3] + 10], sx = x + 16, sw = pw - 32, seg = sw / 5, shh = ph * 0.17, sy = y + ph - shh - ph * 0.17;
+  const X = d => { if (d <= bounds[0]) return sx; for (let i = 0; i < 5; i++) if (d < bounds[i + 1]) return sx + seg * (i + (d - bounds[i]) / (bounds[i + 1] - bounds[i])); return sx + sw; };
+  const labs = ["Too quiet", "Quiet", "Good", "Back row", "Too loud"];
+  for (let i = 0; i < 5; i++) { g.fillStyle = VZ[i].c; g.globalAlpha = i === z ? 1 : 0.5;
+    if (i === z) glow(g, VZ[i].c, 16);
+    rrect(g, sx + i * seg + 2, sy, seg - 4, shh, 10); g.fill(); noGlow(g); g.globalAlpha = 1;
+    const lp = fitFont(g, labs[i], 800, Math.max(14, ph * 0.065), seg - 4);
+    text(g, labs[i], sx + i * seg + seg / 2, sy + shh + ph * 0.085, `800 ${lp}px -apple-system, Inter, sans-serif`, i === z ? "#ffffff" : "#c3c9d0"); }
+  if (S.voice != null) { const mx = X(S.voice), m = ph * 0.075;
+    g.fillStyle = "#fff"; g.strokeStyle = "#000"; g.lineWidth = 3; glow(g, "rgba(0,0,0,.8)", 10);
+    g.beginPath(); g.moveTo(mx, sy + 2); g.lineTo(mx - m, sy - m * 1.4); g.lineTo(mx + m, sy - m * 1.4); g.closePath(); g.stroke(); g.fill();
+    rrect(g, mx - 4, sy - 4, 8, shh + 8, 4); g.stroke(); g.fill(); noGlow(g); }
   g.restore();
 }
 let last = performance.now(), fade = 0;
