@@ -23,8 +23,8 @@
   header { top:0; padding:calc(env(safe-area-inset-top) + 8px) 12px 6px; }
   footer { bottom:0; padding:8px 18px calc(env(safe-area-inset-bottom) + 14px); justify-content:space-between; }
   .title { flex:1; text-align:center; min-width:0; }
-  #tname { font-size:17px; font-weight:700; letter-spacing:2px; text-transform:uppercase; white-space:nowrap; }
-  #ttag { font-size:11px; opacity:.65; letter-spacing:1px; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #tname { font-size:19px; font-weight:700; letter-spacing:2px; text-transform:uppercase; white-space:nowrap; }
+  #ttag { font-size:12px; opacity:.85; letter-spacing:1px; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #dots { display:flex; justify-content:center; gap:5px; margin-top:6px; }
   #dots i { width:5px; height:5px; border-radius:3px; background:var(--fg); opacity:.25; transition:all .3s; }
   #dots i.on { width:16px; opacity:.95; background:var(--accent); }
@@ -237,7 +237,7 @@ const themes = [
 { name: "Covert Ops", tag: "Field surveillance HUD", swatch: "#ff2b3a",
   ui: { fg: "#ff4b55", chrome: "rgba(40,0,0,.55)", accent: "#ff2b3a", btnfg: "#000", font: "Rajdhani, sans-serif", line: "rgba(255,60,70,.4)" },
   draw(g, w, h, r, t) {
-    const red = "#ff2b3a", dim = "rgba(255,43,58,.18)";
+    const red = "#ff2b3a", dim = "rgba(255,43,58,.3)";
     g.fillStyle = "#040202"; g.fillRect(0, 0, w, h);
     g.strokeStyle = "rgba(255,40,50,.06)"; g.lineWidth = 1;
     for (let x = (t * 6) % 28; x < w; x += 28) line(g, x, 0, x, h);
@@ -246,18 +246,18 @@ const themes = [
     g.strokeStyle = red; g.lineWidth = 2; const b = 18, m = 10;
     [[r.x + m, r.y, 1, 1], [r.x + r.w - m, r.y, -1, 1], [r.x + m, r.y + r.h, 1, -1], [r.x + r.w - m, r.y + r.h, -1, -1]].forEach(([x, y, sx, sy]) => {
       g.beginPath(); g.moveTo(x, y + b * sy); g.lineTo(x, y); g.lineTo(x + b * sx, y); g.stroke(); });
-    text(g, "ACOUSTIC SURVEILLANCE // CH-01", r.x + 22, r.y + 16, "600 12px Rajdhani", red, "left");
-    text(g, "T+ " + clock(S.elapsed), r.x + r.w - 22, r.y + 16, "600 12px Rajdhani", red, "right");
-    const cx = w / 2, R = Math.min(r.w * 0.38, r.h * 0.27), cy = r.y + 30 + R * 1.12;
+    text(g, "ACOUSTIC SURVEILLANCE // CH-01", r.x + 22, r.y + 16, "700 15px Rajdhani", red, "left");
+    text(g, "T+ " + clock(S.elapsed), r.x + r.w - 22, r.y + 16, "700 15px Rajdhani", red, "right");
+    const cx = w / 2, R = Math.min(r.w * 0.36, r.h * 0.26), cy = r.y + 36 + R * 1.14;
     const a0 = Math.PI * 0.75, sw = Math.PI * 1.5, lv = norm(S.db);
     for (let i = 0; i <= 100; i++) {
       const a = a0 + i / 100 * sw, on = S.db != null && i / 100 <= lv, major = i % 10 === 0;
-      g.strokeStyle = on ? red : dim; g.lineWidth = major ? 3 : 2;
+      g.strokeStyle = on ? red : dim; g.lineWidth = major ? 5 : 3.5;
       if (on) glow(g, red, 10);
       const r1 = R * (major ? 0.88 : 0.92), r2 = R;
       line(g, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1, cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
       noGlow(g);
-      if (major) text(g, String(20 + i), cx + Math.cos(a) * R * 1.1, cy + Math.sin(a) * R * 1.1, "600 11px Rajdhani", on ? red : "rgba(255,60,70,.45)");
+      if (major) text(g, String(20 + i), cx + Math.cos(a) * R * 1.1, cy + Math.sin(a) * R * 1.1, "700 15px Rajdhani", on ? "#fff" : "rgba(255,80,90,.75)");
     }
     if (S.peak != null) { const a = arcAng(S.peak, a0, sw); g.fillStyle = "#fff";
       g.beginPath(); g.arc(cx + Math.cos(a) * R * 1.03, cy + Math.sin(a) * R * 1.03, 3, 0, TAU); g.fill(); }
@@ -267,25 +267,25 @@ const themes = [
     g.rotate(-t * 0.9); g.setLineDash([R * 0.5, R * 0.3]); g.lineWidth = 3; g.strokeStyle = "rgba(255,43,58,.35)";
     g.beginPath(); g.arc(0, 0, R * 0.7, 0, TAU); g.stroke(); g.restore(); g.setLineDash([]);
     glow(g, red, 18);
-    text(g, fmt(S.db), cx, cy - R * 0.04, `700 ${R * 0.62}px Rajdhani`, "#fff");
+    text(g, fmt(S.db), cx, cy - R * 0.04, `700 ${R * 0.8}px Rajdhani`, "#fff");
     noGlow(g);
-    text(g, "dB SPL", cx, cy + R * 0.34, "600 14px Rajdhani", red);
+    text(g, "dB SPL", cx, cy + R * 0.42, "700 20px Rajdhani", red);
     // status
     const alert = S.db != null && S.db >= 85, blink = !alert || Math.floor(t * 3) % 2;
     const sy = cy + R * 1.18;
-    g.strokeStyle = red; g.lineWidth = 1.5; rrect(g, cx - 110, sy - 15, 220, 30, 2); g.stroke();
+    g.strokeStyle = red; g.lineWidth = 2.5; rrect(g, cx - 130, sy - 19, 260, 38, 3); g.stroke();
     if (alert && blink) { g.fillStyle = "rgba(255,43,58,.25)"; g.fill(); }
-    text(g, "STATUS: " + (S.db == null ? "STANDBY" : S.db < 70 ? "NOMINAL" : S.db < 85 ? "ELEVATED" : "BREACH"), cx, sy + 1, "700 15px Rajdhani", blink ? red : "#600");
+    text(g, "STATUS: " + (S.db == null ? "STANDBY" : S.db < 70 ? "NOMINAL" : S.db < 85 ? "ELEVATED" : "BREACH"), cx, sy + 1, "700 21px Rajdhani", blink ? (alert ? "#fff" : red) : "#600");
     // stats
     const st = [["PEAK", S.peak], ["MIN", S.min], ["LEQ", S.leq], ["MAX", S.max]], bw = (r.w - 48) / 4, by = sy + 30;
     st.forEach(([k, v], i) => { const x = r.x + 24 + i * bw;
-      g.strokeStyle = "rgba(255,43,58,.35)"; g.lineWidth = 1; g.strokeRect(x + 3, by, bw - 6, 44);
-      text(g, k, x + bw / 2, by + 12, "600 10px Rajdhani", "rgba(255,80,90,.7)");
-      text(g, fmt(v, 1), x + bw / 2, by + 31, "700 19px Rajdhani", "#fff"); });
+      g.strokeStyle = "rgba(255,43,58,.7)"; g.lineWidth = 1.5; g.strokeRect(x + 3, by, bw - 6, 56);
+      text(g, k, x + bw / 2, by + 13, "700 13px Rajdhani", red);
+      text(g, fmt(v, 1), x + bw / 2, by + 38, "700 26px Rajdhani", "#fff"); });
     // oscilloscope
-    const oy = by + 62, oh = Math.max(30, r.y + r.h - oy - 8);
+    const oy = by + 72, oh = Math.max(30, r.y + r.h - oy - 8);
     g.strokeStyle = "rgba(255,43,58,.2)"; line(g, r.x + 24, oy + oh / 2, r.x + r.w - 24, oy + oh / 2);
-    g.strokeStyle = red; g.lineWidth = 1.6; glow(g, red, 8); g.beginPath();
+    g.strokeStyle = red; g.lineWidth = 3; glow(g, red, 12); g.beginPath();
     for (let i = 0; i < S.wave.length; i++) { const x = r.x + 24 + i / (S.wave.length - 1) * (r.w - 48), y = oy + oh / 2 - clamp(S.wave[i] * 4, -1, 1) * oh / 2;
       i ? g.lineTo(x, y) : g.moveTo(x, y); }
     g.stroke(); noGlow(g);
@@ -310,7 +310,7 @@ const themes = [
     for (let i = 0; i < NB * 2; i++) {
       const bi = i < NB ? i : NB * 2 - 1 - i, v = S.bands[bi];
       const a = -Math.PI / 2 + i / (NB * 2) * TAU, r1 = R * 1.08, r2 = r1 + 4 + v * R * 0.75;
-      g.strokeStyle = `rgba(41,230,255,${0.35 + v * 0.65})`; g.lineWidth = 3; glow(g, c, 8);
+      g.strokeStyle = `rgba(41,230,255,${0.5 + v * 0.5})`; g.lineWidth = 4.5; glow(g, c, 10);
       line(g, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1, cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
     }
     noGlow(g); g.lineCap = "butt";
@@ -320,25 +320,25 @@ const themes = [
       g.save(); g.rotate(t * sp); g.setLineDash(d); g.strokeStyle = "rgba(41,230,255,.55)"; g.lineWidth = lw;
       g.beginPath(); g.arc(0, 0, R * k, 0, TAU); g.stroke(); g.restore(); });
     g.setLineDash([]);
-    g.strokeStyle = c; g.lineWidth = 4; glow(g, c, 16);
+    g.strokeStyle = c; g.lineWidth = 8; glow(g, c, 20);
     g.beginPath(); g.arc(0, 0, R * 0.92, -Math.PI / 2, -Math.PI / 2 + norm(S.db) * TAU); g.stroke(); noGlow(g);
     g.restore();
-    glow(g, c, 25); text(g, fmt(S.db), cx, cy - 4, `700 ${R * 0.55}px Orbitron`, "#e6fdff"); noGlow(g);
-    text(g, "DECIBELS", cx, cy + R * 0.36, "500 11px Orbitron", c);
-    text(g, status(S.db), cx, cy + R * 2.0 - 8, "700 14px Orbitron", c);
+    glow(g, c, 25); text(g, fmt(S.db), cx, cy - 4, `900 ${R * 0.66}px Orbitron`, "#ffffff"); noGlow(g);
+    text(g, "DECIBELS", cx, cy + R * 0.42, "700 14px Orbitron", c);
+    glow(g, c, 12); text(g, status(S.db), cx, cy + R * 2.0 - 8, "900 19px Orbitron", "#e6fdff"); noGlow(g);
     // history panel
-    const py = cy + R * 2.0 + 14, ph = Math.max(50, (r.y + r.h) - py - 70), px = r.x + 20, pw = r.w - 40;
+    const py = cy + R * 2.0 + 16, ph = Math.max(50, (r.y + r.h) - py - 78), px = r.x + 20, pw = r.w - 40;
     g.strokeStyle = "rgba(41,230,255,.3)"; g.lineWidth = 1; rrect(g, px, py, pw, ph, 10); g.stroke();
     if (histPath(g, px + 8, py + 8, pw - 16, ph - 16)) {
-      g.strokeStyle = c; g.lineWidth = 2; glow(g, c, 10); g.stroke(); noGlow(g);
+      g.strokeStyle = c; g.lineWidth = 3.5; glow(g, c, 12); g.stroke(); noGlow(g);
       g.lineTo(px + pw - 8, py + ph - 8); g.lineTo(px + 8 + (HIST - S.hist.length) / (HIST - 1) * (pw - 16), py + ph - 8); g.closePath();
       const fg = g.createLinearGradient(0, py, 0, py + ph); fg.addColorStop(0, "rgba(41,230,255,.3)"); fg.addColorStop(1, "rgba(41,230,255,0)");
       g.fillStyle = fg; g.fill(); }
     const st = [["MIN", S.min], ["AVG", S.leq], ["PEAK", S.peak], ["MAX", S.max]], bw = pw / 4, sy = py + ph + 12;
     st.forEach(([k, v], i) => { const x = px + i * bw + 4;
-      g.fillStyle = "rgba(41,230,255,.08)"; rrect(g, x, sy, bw - 8, 48, 24); g.fill(); g.strokeStyle = "rgba(41,230,255,.35)"; g.stroke();
-      text(g, k, x + (bw - 8) / 2, sy + 15, "500 9px Orbitron", c);
-      text(g, fmt(v, 1), x + (bw - 8) / 2, sy + 33, "700 14px Orbitron", "#e6fdff"); });
+      g.fillStyle = "rgba(41,230,255,.14)"; rrect(g, x, sy, bw - 8, 56, 28); g.fill(); g.strokeStyle = "rgba(41,230,255,.7)"; g.lineWidth = 1.5; g.stroke();
+      text(g, k, x + (bw - 8) / 2, sy + 17, "700 11px Orbitron", c);
+      text(g, fmt(v, 1), x + (bw - 8) / 2, sy + 38, "900 17px Orbitron", "#fff"); });
   } },
 
 // 3 ── STUDIO VU ─────────────────────────────────────────
@@ -368,17 +368,17 @@ const themes = [
     g.strokeStyle = "#c0201a"; g.lineWidth = 5; g.beginPath(); g.arc(px, py, R + 3, A0 + SW * 0.65, A0 + SW); g.stroke();
     for (let d = 20; d <= 120; d += 5) {
       const a = A0 + (d - 20) / 100 * SW, major = d % 20 === 0, red = d >= 85;
-      g.strokeStyle = red ? "#c0201a" : "#2b1d0c"; g.lineWidth = major ? 2.5 : 1.2;
-      const r1 = R - (major ? 14 : 8);
+      g.strokeStyle = red ? "#c0201a" : "#2b1d0c"; g.lineWidth = major ? 4 : 2;
+      const r1 = R - (major ? 18 : 10);
       line(g, px + Math.cos(a) * r1, py + Math.sin(a) * r1, px + Math.cos(a) * R, py + Math.sin(a) * R);
-      if (major) text(g, String(d), px + Math.cos(a) * (R + 16), py + Math.sin(a) * (R + 16), `700 ${fw * 0.04}px 'Playfair Display'`, red ? "#c0201a" : "#2b1d0c");
+      if (major) text(g, String(d), px + Math.cos(a) * (R + 16), py + Math.sin(a) * (R + 16), `700 ${fw * 0.058}px 'Playfair Display'`, red ? "#c0201a" : "#2b1d0c");
     }
     text(g, "dB", px, fy + fh * 0.58, `italic 500 ${fw * 0.09}px 'Playfair Display'`, "#2b1d0c");
-    text(g, "SOUND LEVEL", px, fy + fh * 0.72, `600 ${fw * 0.03}px Inter`, "#5a4320");
+    text(g, "SOUND LEVEL", px, fy + fh * 0.72, `700 ${fw * 0.04}px Inter`, "#3d2a0c");
     // needle
     const na = A0 + pos * SW;
     g.strokeStyle = "rgba(0,0,0,.18)"; g.lineWidth = 2.5; line(g, px + 4, py + 4, px + 4 + Math.cos(na) * R * 1.02, py + 4 + Math.sin(na) * R * 1.02);
-    g.strokeStyle = "#121212"; g.lineWidth = 2; line(g, px, py, px + Math.cos(na) * R * 1.02, py + Math.sin(na) * R * 1.02);
+    g.strokeStyle = "#121212"; g.lineWidth = 3.5; line(g, px, py, px + Math.cos(na) * R * 1.02, py + Math.sin(na) * R * 1.02);
     g.fillStyle = "#151515"; g.beginPath(); g.arc(px, py, fh * 0.2, Math.PI, TAU); g.fill();
     // glass glare
     const gl = g.createLinearGradient(fx, fy, fx + fw, fy + fh); gl.addColorStop(0, "rgba(255,255,255,.22)"); gl.addColorStop(.4, "rgba(255,255,255,0)");
@@ -389,20 +389,20 @@ const themes = [
       g.fillStyle = "#999"; g.beginPath(); g.arc(x, y, 4, 0, TAU); g.fill(); g.strokeStyle = "#444"; g.lineWidth = 1.2; line(g, x - 3, y - 1, x + 3, y + 1); });
     // amber readout + LED
     const ry = fy + fh + 40, rw = Math.min(260, r.w - 60);
-    g.fillStyle = "#0b0602"; rrect(g, w / 2 - rw / 2, ry, rw, 64, 10); g.fill(); g.strokeStyle = "#5a3d1a"; g.lineWidth = 2; g.stroke();
-    glow(g, "#ffa630", 14); text(g, fmt(S.db, 1), w / 2 - 8, ry + 34, "44px 'Share Tech Mono'", "#ffb347"); noGlow(g);
+    g.fillStyle = "#0b0602"; rrect(g, w / 2 - rw / 2, ry, rw, 74, 10); g.fill(); g.strokeStyle = "#5a3d1a"; g.lineWidth = 2; g.stroke();
+    glow(g, "#ffa630", 14); text(g, fmt(S.db, 1), w / 2 - 4, ry + 39, "58px 'Share Tech Mono'", "#ffbe5c"); noGlow(g);
     text(g, "dB", w / 2 + rw / 2 - 26, ry + 40, "16px 'Share Tech Mono'", "#a8762b");
     const hot = S.db != null && S.db >= 85;
     g.fillStyle = hot ? "#ff2a1a" : "#3a0a06"; if (hot) glow(g, "#ff2a1a", 18);
     g.beginPath(); g.arc(w / 2 - rw / 2 + 22, ry + 32, 7, 0, TAU); g.fill(); noGlow(g);
     text(g, "PEAK", w / 2 - rw / 2 + 22, ry + 52, "600 8px Inter", "#a8762b");
     // engraved plates
-    const st = [["MIN", S.min], ["LEQ", S.leq], ["MAX", S.max]], pw = Math.min(110, (r.w - 40) / 3), sy = ry + 84;
+    const st = [["MIN", S.min], ["LEQ", S.leq], ["MAX", S.max]], pw = Math.min(116, (r.w - 40) / 3), sy = ry + 92;
     st.forEach(([k, v], i) => { const x = w / 2 + (i - 1) * (pw + 8) - pw / 2;
       const pg = g.createLinearGradient(0, sy, 0, sy + 54); pg.addColorStop(0, "#c9a85c"); pg.addColorStop(1, "#8a6a2c");
-      g.fillStyle = pg; rrect(g, x, sy, pw, 54, 6); g.fill();
-      text(g, k, x + pw / 2, sy + 15, "700 10px Inter", "#3d2a0c");
-      text(g, fmt(v, 1), x + pw / 2, sy + 36, "700 20px 'Playfair Display'", "#21150a"); });
+      g.fillStyle = pg; rrect(g, x, sy, pw, 62, 6); g.fill();
+      text(g, k, x + pw / 2, sy + 16, "700 12px Inter", "#2a1a06");
+      text(g, fmt(v, 1), x + pw / 2, sy + 41, "700 26px 'Playfair Display'", "#140c04"); });
   } },
 
 // 4 ── TERMINAL ─────────────────────────────────────────
@@ -410,10 +410,10 @@ const themes = [
   ui: { fg: "#33ff77", chrome: "rgba(0,20,6,.6)", accent: "#33ff77", btnfg: "#001a07", font: "'Share Tech Mono', monospace", line: "rgba(51,255,119,.4)" },
   reset() { this.log = []; this.lt = 0; }, init() { this.reset(); },
   draw(g, w, h, r, t) {
-    const G = "#33ff77", D = "rgba(51,255,119,.45)";
+    const G = "#4dff88", D = "rgba(77,255,136,.7)";
     g.fillStyle = "#010a03"; g.fillRect(0, 0, w, h);
     g.globalAlpha = 0.93 + Math.random() * 0.07;
-    const x0 = r.x + 18, fs = Math.max(11, Math.min(14, r.w / 30)), lh = fs * 1.45;
+    const x0 = r.x + 18, fs = Math.max(14, Math.min(17, r.w / 25)), lh = fs * 1.45;
     let y = r.y + 14;
     glow(g, G, 6);
     const L = (s, c = G, f = fs) => { text(g, s, x0, y, `${f}px 'Share Tech Mono'`, c, "left", "top"); y += f * 1.45; };
@@ -421,7 +421,7 @@ const themes = [
     L("> uplink: mic0 / 48kHz / rms / " + S.resp.toUpperCase(), D);
     L("> session " + clock(S.elapsed) + (S.running && Math.floor(t * 2) % 2 ? " █" : ""), D);
     y += lh * 0.5;
-    const big = Math.min(r.w * 0.36, 150);
+    const big = Math.min(r.w * 0.4, 170);
     text(g, fmt(S.db, 1), x0 - 4, y, `${big}px 'Share Tech Mono'`, G, "left", "top");
     text(g, "dB", x0 + g.measureText(fmt(S.db, 1)).width + 4, y + big * 0.6, `${big * 0.25}px 'Share Tech Mono'`, D, "left", "top");
     y += big * 1.0;
@@ -437,7 +437,7 @@ const themes = [
     const room = Math.max(0, Math.floor((r.y + r.h - y) / lh));
     this.log.slice(-room).forEach((s, i, a) => L(s, `rgba(51,255,119,${0.25 + 0.6 * (i + 1) / a.length})`));
     noGlow(g); g.globalAlpha = 1;
-    g.fillStyle = "rgba(0,0,0,.28)"; for (let yy = 0; yy < h; yy += 3) g.fillRect(0, yy, w, 1);
+    g.fillStyle = "rgba(0,0,0,.18)"; for (let yy = 0; yy < h; yy += 3) g.fillRect(0, yy, w, 1);
     const sl = (t * 120) % (h + 200) - 100; const sg = g.createLinearGradient(0, sl - 60, 0, sl);
     sg.addColorStop(0, "rgba(51,255,119,0)"); sg.addColorStop(1, "rgba(51,255,119,.06)"); g.fillStyle = sg; g.fillRect(0, sl - 60, w, 60);
     const v = g.createRadialGradient(w / 2, h / 2, h * 0.3, w / 2, h / 2, h * 0.8); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.75)");
@@ -468,7 +468,7 @@ const themes = [
     // ground grid
     g.fillStyle = "#0a0118"; g.fillRect(0, hz, w, h - hz);
     this.z = (this.z + dt * (0.4 + lv * 2.2)) % 1;
-    g.strokeStyle = "#ff2fb4"; g.lineWidth = 1.5; glow(g, "#ff2fb4", 8);
+    g.strokeStyle = "#ff2fb4"; g.lineWidth = 2.5; glow(g, "#ff2fb4", 10);
     for (let i = 0; i < 14; i++) { const p = (i + this.z) / 14, y = hz + Math.pow(p, 2.2) * (h - hz); g.globalAlpha = p; line(g, 0, y, w, y); }
     g.globalAlpha = 1;
     for (let i = -12; i <= 12; i++) line(g, w / 2 + i * 8, hz, w / 2 + i * w * 0.18, h);
@@ -476,18 +476,19 @@ const themes = [
     const hg = g.createLinearGradient(0, hz - 2, 0, hz + 30); hg.addColorStop(0, "rgba(255,47,180,.6)"); hg.addColorStop(1, "rgba(255,47,180,0)");
     g.fillStyle = hg; g.fillRect(0, hz, w, 30);
     // number
-    const fs = Math.min(r.w * 0.3, 130), ny = r.y + fs * 0.62;
+    const fs = Math.min(r.w * 0.36, 150), ny = r.y + fs * 0.62;
     g.save(); g.translate(w / 2, ny); g.transform(1, 0, -0.18, 1, 0, 0);
     g.font = `900 ${fs}px Orbitron`; g.textAlign = "center"; g.textBaseline = "middle";
     glow(g, "#ff2fb4", 30); g.lineWidth = 3; g.strokeStyle = "#ff2fb4"; g.strokeText(fmt(S.db), 0, 0);
     const tg = g.createLinearGradient(0, -fs / 2, 0, fs / 2); tg.addColorStop(0, "#fff"); tg.addColorStop(1, "#ffb3e6");
     g.fillStyle = tg; g.fillText(fmt(S.db), 0, 0); noGlow(g); g.restore();
-    text(g, "dB  ·  " + status(S.db), w / 2, ny + fs * 0.62, "700 13px Orbitron", "#29e6ff");
+    glow(g, "#29e6ff", 12); text(g, "dB  ·  " + status(S.db), w / 2, ny + fs * 0.64, "900 17px Orbitron", "#bff7ff"); noGlow(g);
     // stats on the road
     const st = [["MIN", S.min], ["LEQ", S.leq], ["MAX", S.max]], yy = r.y + r.h - 30;
     st.forEach(([k, v], i) => { const x = w / 2 + (i - 1) * r.w * 0.3;
-      text(g, k, x, yy - 14, "500 10px Orbitron", "#ff9de0");
-      glow(g, "#29e6ff", 12); text(g, fmt(v, 1), x, yy + 6, "700 20px Orbitron", "#dffbff"); noGlow(g); });
+      g.fillStyle = "rgba(10,1,24,.75)"; rrect(g, x - r.w * 0.14, yy - 30, r.w * 0.28, 56, 12); g.fill();
+      text(g, k, x, yy - 14, "700 12px Orbitron", "#ffb3e6");
+      glow(g, "#29e6ff", 12); text(g, fmt(v, 1), x, yy + 8, "900 24px Orbitron", "#fff"); noGlow(g); });
   } },
 
 // 6 ── MINIMAL ─────────────────────────────────────────
@@ -500,22 +501,22 @@ const themes = [
     const bg = g.createRadialGradient(w / 2, cy, 0, w / 2, cy, br);
     bg.addColorStop(0, col + "55"); bg.addColorStop(1, col + "00"); g.fillStyle = bg; g.fillRect(0, 0, w, h);
     const fs = Math.min(r.w * 0.44, 190);
-    text(g, fmt(S.db), w / 2, cy, `200 ${fs}px Inter`, "#111");
-    text(g, "dB", w / 2, cy + fs * 0.52, "400 15px Inter", "#888");
-    g.fillStyle = col; g.beginPath(); const sw = 9; g.font = "600 13px Inter";
+    text(g, fmt(S.db), w / 2, cy, `600 ${fs}px Inter`, "#0a0a0a");
+    text(g, "dB", w / 2, cy + fs * 0.52, "600 20px Inter", "#555");
+    g.fillStyle = col; g.beginPath(); const sw = 9; g.font = "600 18px Inter";
     const lbl = status(S.db).toLowerCase().replace(/^./, c => c.toUpperCase()), lw = g.measureText(lbl).width;
-    g.arc(w / 2 - lw / 2 - sw, cy + fs * 0.52 + 30, 4, 0, TAU); g.fill();
-    text(g, lbl, w / 2 + 4, cy + fs * 0.52 + 30, "600 13px Inter", "#333");
+    g.arc(w / 2 - lw / 2 - sw - 4, cy + fs * 0.52 + 34, 7, 0, TAU); g.fill();
+    text(g, lbl, w / 2 + 4, cy + fs * 0.52 + 34, "600 18px Inter", "#111");
     // chart
     const px = r.x + 24, pw = r.w - 48, py = cy + fs * 0.52 + 64, ph = Math.max(60, r.y + r.h - py - 80);
-    [40, 60, 85, 100].forEach(d => { const y = py + ph - norm(d) * ph; g.strokeStyle = "rgba(0,0,0,.07)"; g.lineWidth = 1; line(g, px, y, px + pw, y);
-      text(g, String(d), px + pw, y - 7, "400 10px Inter", "#aaa", "right"); });
-    if (histPath(g, px, py, pw, ph)) { g.strokeStyle = "#111"; g.lineWidth = 1.6; g.lineJoin = "round"; g.stroke(); }
-    text(g, "LAST 30 SECONDS", px, py - 12, "600 10px Inter", "#aaa", "left");
-    const st = [["Min", S.min], ["Average", S.leq], ["Max", S.max]], cw = pw / 3, sy = py + ph + 30;
+    [40, 60, 85, 100].forEach(d => { const y = py + ph - norm(d) * ph; g.strokeStyle = "rgba(0,0,0,.12)"; g.lineWidth = 1; line(g, px, y, px + pw, y);
+      text(g, String(d), px + pw, y - 8, "600 12px Inter", "#777", "right"); });
+    if (histPath(g, px, py, pw, ph)) { g.strokeStyle = col; g.lineWidth = 3.5; g.lineJoin = "round"; g.stroke(); }
+    text(g, "LAST 30 SECONDS", px, py - 14, "700 12px Inter", "#777", "left");
+    const st = [["Min", S.min], ["Average", S.leq], ["Max", S.max]], cw = pw / 3, sy = py + ph + 28;
     st.forEach(([k, v], i) => { const x = px + cw * i + cw / 2;
-      text(g, k.toUpperCase(), x, sy, "600 10px Inter", "#999");
-      text(g, fmt(v, 1), x, sy + 24, "400 24px Inter", "#111"); });
+      text(g, k.toUpperCase(), x, sy, "700 12px Inter", "#777");
+      text(g, fmt(v, 1), x, sy + 28, "700 30px Inter", "#0a0a0a"); });
   } },
 
 // 7 ── COCKPIT ─────────────────────────────────────────
@@ -528,14 +529,14 @@ const themes = [
     g.fillStyle = "#0c0d0e"; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.fill();
     const A0 = Math.PI * 0.75, SW = Math.PI * 1.5;
     [[20, 70, "#2fd16b"], [70, 85, "#ffd23f"], [85, 120, "#ff3b30"]].forEach(([a, b, c]) => {
-      g.strokeStyle = c; g.lineWidth = R * 0.05; g.beginPath(); g.arc(cx, cy, R * 0.8, arcAng(a, A0, SW), arcAng(b, A0, SW)); g.stroke(); });
+      g.strokeStyle = c; g.lineWidth = R * 0.075; g.beginPath(); g.arc(cx, cy, R * 0.8, arcAng(a, A0, SW), arcAng(b, A0, SW)); g.stroke(); });
     for (let d = 20; d <= 120; d += big ? 2 : 5) {
-      const a = arcAng(d, A0, SW), M = d % 10 === 0; g.strokeStyle = "#eee"; g.lineWidth = M ? 2.4 : 1;
+      const a = arcAng(d, A0, SW), M = d % 10 === 0; g.strokeStyle = "#fff"; g.lineWidth = M ? 4 : 1.8;
       const r1 = R * (M ? 0.84 : 0.89); line(g, cx + Math.cos(a) * r1, cy + Math.sin(a) * r1, cx + Math.cos(a) * R * 0.95, cy + Math.sin(a) * R * 0.95);
-      if (M && big) text(g, String(d / 10), cx + Math.cos(a) * R * 0.68, cy + Math.sin(a) * R * 0.68, `600 ${R * 0.13}px Rajdhani`, "#eee");
+      if (M && big) text(g, String(d / 10), cx + Math.cos(a) * R * 0.68, cy + Math.sin(a) * R * 0.68, `700 ${R * 0.17}px Rajdhani`, "#fff");
     }
-    if (big) { text(g, label, cx, cy + R * 0.25, `600 ${R * 0.075}px Rajdhani`, "#aaa"); text(g, "dB × 10", cx, cy + R * 0.72, `500 ${R * 0.07}px Rajdhani`, "#777"); }
-    else text(g, label, cx, cy - R * 0.32, `700 ${R * 0.2}px Rajdhani`, "#bbb");
+    if (big) { text(g, label, cx, cy + R * 0.25, `700 ${R * 0.09}px Rajdhani`, "#ddd"); text(g, "dB × 10", cx, cy + R * 0.72, `500 ${R * 0.07}px Rajdhani`, "#777"); }
+    else text(g, label, cx, cy - R * 0.32, `700 ${R * 0.24}px Rajdhani`, "#fff");
     const a = arcAng(val == null ? MIN_DB : val, A0, SW);
     g.save(); g.translate(cx, cy); g.rotate(a);
     glow(g, "rgba(0,0,0,.8)", 6);
@@ -561,20 +562,20 @@ const themes = [
       g.fillStyle = "#3c3f44"; g.beginPath(); g.arc(x, y, 5, 0, TAU); g.fill(); g.strokeStyle = "#111"; g.lineWidth = 1.5; line(g, x - 3.5, y, x + 3.5, y); line(g, x, y - 3.5, x, y + 3.5); });
     this.gauge(g, cx, cy, R, this.n, "SOUND PRESSURE", true);
     // drum readout
-    const dw = R * 0.62, dh = R * 0.24, dy = cy + R * 0.38;
+    const dw = R * 0.72, dh = R * 0.28, dy = cy + R * 0.36;
     g.fillStyle = "#000"; rrect(g, cx - dw / 2, dy, dw, dh, 4); g.fill(); g.strokeStyle = "#555"; g.lineWidth = 1; g.stroke();
-    text(g, fmt(S.db, 1), cx, dy + dh / 2 + 1, `600 ${dh * 0.8}px 'Share Tech Mono'`, "#fff");
+    text(g, fmt(S.db, 1), cx, dy + dh / 2 + 1, `700 ${dh * 0.88}px 'Share Tech Mono'`, "#fff");
     // sub gauges
     const r2 = Math.min(R * 0.5, (r.y + r.h - (cy + R * 1.3)) * 0.42), y2 = cy + R * 1.3 + r2 * 1.25;
     if (r2 > 26) { this.gauge(g, cx - R * 0.65, y2, r2, S.leq, "AVG", false); this.gauge(g, cx + R * 0.65, y2, r2, S.max, "MAX", false);
-      text(g, fmt(S.leq, 1), cx - R * 0.65, y2 + r2 * 0.5, `600 ${r2 * 0.26}px 'Share Tech Mono'`, "#ff8f1f");
-      text(g, fmt(S.max, 1), cx + R * 0.65, y2 + r2 * 0.5, `600 ${r2 * 0.26}px 'Share Tech Mono'`, "#ff8f1f"); }
+      text(g, fmt(S.leq, 1), cx - R * 0.65, y2 + r2 * 0.5, `700 ${r2 * 0.34}px 'Share Tech Mono'`, "#ffa040");
+      text(g, fmt(S.max, 1), cx + R * 0.65, y2 + r2 * 0.5, `700 ${r2 * 0.34}px 'Share Tech Mono'`, "#ffa040"); }
     // master caution
     const warn = S.db != null && S.db >= 85, on = warn && Math.floor(t * 2.5) % 2;
     const wx = r.x + r.w - 86, wy = r.y + 2;
-    g.fillStyle = on ? "#ffb000" : "#3a2c08"; rrect(g, wx, wy, 70, 26, 4); g.fill();
-    text(g, "CAUTION", wx + 35, wy + 14, "700 12px Rajdhani", on ? "#111" : "#7a5a12");
-    text(g, "T " + clock(S.elapsed), r.x + 16, wy + 14, "600 13px 'Share Tech Mono'", "#9aa", "left");
+    g.fillStyle = on ? "#ffb000" : "#3a2c08"; rrect(g, wx - 10, wy - 2, 80, 30, 4); g.fill();
+    text(g, "CAUTION", wx + 35, wy + 14, "700 15px Rajdhani", on ? "#111" : "#9a7a22");
+    text(g, "T " + clock(S.elapsed), r.x + 16, wy + 14, "700 16px 'Share Tech Mono'", "#cdd", "left");
   } },
 
 // 8 ── SEISMOGRAPH ─────────────────────────────────────────
@@ -587,27 +588,27 @@ const themes = [
     const scroll = S.running ? (S.hist.length % 10) / 10 * (pw / (HIST - 1)) * 10 : 0;
     for (let x = px + pw - scroll; x > px; x -= pw / 60) { g.strokeStyle = "rgba(200,70,60,.15)"; g.lineWidth = 1; line(g, x, py, x, py + ph); }
     for (let d = 20; d <= 120; d += 5) { const y = py + ph - norm(d) * ph; g.strokeStyle = d % 20 === 0 ? "rgba(200,70,60,.35)" : "rgba(200,70,60,.15)"; g.lineWidth = 1; line(g, px, y, px + pw, y);
-      if (d % 20 === 0) text(g, String(d), px + pw + 6, y, "11px 'Special Elite'", "#a0473d", "left"); }
+      if (d % 20 === 0) text(g, String(d), px + pw + 6, y, "14px 'Special Elite'", "#8a2f25", "left"); }
     g.strokeStyle = "#a0473d"; g.lineWidth = 1.5; g.strokeRect(px, py, pw, ph);
-    text(g, "ACOUSTIC SEISMOGRAPH — STATION 01", px, r.y + 14, "15px 'Special Elite'", "#2a2420", "left");
+    text(g, "ACOUSTIC SEISMOGRAPH — STN 01", px, r.y + 14, "18px 'Special Elite'", "#14100c", "left");
     const d = new Date();
-    text(g, d.toDateString().toUpperCase() + "  ·  " + d.toTimeString().slice(0, 8) + "  ·  RUN " + clock(S.elapsed), px, r.y + 36, "11px 'Special Elite'", "#6b5d4d", "left");
-    if (histPath(g, px, py, pw, ph)) { g.strokeStyle = "#1d3a8a"; g.lineWidth = 1.7; g.lineJoin = "round"; g.globalAlpha = .9; g.stroke(); g.globalAlpha = 1; }
+    text(g, d.toDateString().toUpperCase() + "  ·  " + d.toTimeString().slice(0, 8) + "  ·  RUN " + clock(S.elapsed), px, r.y + 38, "13px 'Special Elite'", "#4a3e30", "left");
+    if (histPath(g, px, py, pw, ph)) { g.strokeStyle = "#1d3a8a"; g.lineWidth = 3.2; g.lineJoin = "round"; g.globalAlpha = 1; g.stroke(); g.globalAlpha = 1; }
     // pen
     const yv = py + ph - norm(S.db) * ph;
     g.strokeStyle = "#555"; g.lineWidth = 2; line(g, px + pw, yv, px + pw + 34, yv - 18);
     g.fillStyle = "#1d3a8a"; g.beginPath(); g.moveTo(px + pw, yv); g.lineTo(px + pw + 8, yv - 7); g.lineTo(px + pw + 10, yv - 2); g.fill();
     // readings
     const ry = py + ph + 50;
-    text(g, fmt(S.db, 1), px, ry, `${Math.min(r.w * 0.24, 96)}px 'Special Elite'`, "#2a2420", "left");
+    text(g, fmt(S.db, 1), px, ry, `${Math.min(r.w * 0.28, 110)}px 'Special Elite'`, "#0e0b08", "left");
     text(g, "dB", px + g.measureText(fmt(S.db, 1)).width + 8, ry + 10, "22px 'Special Elite'", "#6b5d4d", "left");
     if (S.db != null && S.db >= 75) {
       g.save(); g.translate(px + pw - 40, ry - 4); g.rotate(-0.15);
       g.strokeStyle = "#c0281e"; g.lineWidth = 3; g.globalAlpha = .85; g.strokeRect(-62, -20, 124, 40);
       text(g, S.db >= 85 ? "WARNING" : "NOTICE", 0, 1, "22px 'Special Elite'", "#c0281e"); g.restore(); g.globalAlpha = 1; }
     const lines = [["MINIMUM", S.min], ["MAXIMUM", S.max], ["EQUIV. LEVEL", S.leq], ["CLASSIFICATION", null]];
-    lines.forEach(([k, v], i) => { const y = ry + 56 + i * 22; if (y > r.y + r.h) return;
-      text(g, k + " ".padEnd(2) + ".".repeat(16 - k.length) + "  " + (v == null && k === "CLASSIFICATION" ? status(S.db) : fmt(v, 1) + " dB"), px, y, "14px 'Special Elite'", "#2a2420", "left"); });
+    lines.forEach(([k, v], i) => { const y = ry + 62 + i * 26; if (y > r.y + r.h) return;
+      text(g, k + " " + ".".repeat(Math.max(2, 15 - k.length)) + "  " + (v == null && k === "CLASSIFICATION" ? status(S.db) : fmt(v, 1) + " dB"), px, y, "17px 'Special Elite'", "#0e0b08", "left"); });
   } },
 
 // 9 ── THERMAL ─────────────────────────────────────────
@@ -626,26 +627,26 @@ const themes = [
     const px = r.x + 16, pw = r.w - 52, py = r.y + 34, ph = Math.max(120, r.h * 0.5);
     g.imageSmoothingEnabled = true; g.drawImage(this.oc, px, py, pw, ph);
     g.fillStyle = "rgba(0,0,0,.18)"; for (let y = py; y < py + ph; y += 2) g.fillRect(px, y, pw, 1);
-    text(g, "THERMAL ACOUSTIC IMAGING", px, r.y + 12, "13px 'Share Tech Mono'", "#ffb070", "left");
-    text(g, "REC " + clock(S.elapsed), px + pw + 36, r.y + 12, "13px 'Share Tech Mono'", S.running && Math.floor(t * 2) % 2 ? "#ff3b30" : "#ffb070", "right");
+    text(g, "THERMAL IMAGING", px, r.y + 12, "16px 'Share Tech Mono'", "#ffc890", "left");
+    text(g, "REC " + clock(S.elapsed), px + pw + 36, r.y + 12, "16px 'Share Tech Mono'", S.running && Math.floor(t * 2) % 2 ? "#ff3b30" : "#ffb070", "right");
     // freq labels
     [[100, "100"], [1000, "1k"], [10000, "10k"]].forEach(([f, l]) => { const x = px + Math.log(f / 40) / Math.log(16000 / 40) * pw;
-      g.strokeStyle = "rgba(255,255,255,.25)"; g.lineWidth = 1; line(g, x, py + ph, x, py + ph + 5); text(g, l + "Hz", x, py + ph + 14, "10px 'Share Tech Mono'", "#a87a50"); });
+      g.strokeStyle = "rgba(255,255,255,.25)"; g.lineWidth = 1; line(g, x, py + ph, x, py + ph + 5); text(g, l + "Hz", x, py + ph + 15, "13px 'Share Tech Mono'", "#d8a070"); });
     // reticle
     const cx = px + pw / 2, cy = py + ph / 2, k = 26;
-    g.strokeStyle = "rgba(255,255,255,.8)"; g.lineWidth = 1.5; line(g, cx - k, cy, cx - 8, cy); line(g, cx + 8, cy, cx + k, cy); line(g, cx, cy - k, cx, cy - 8); line(g, cx, cy + 8, cx, cy + k);
+    g.strokeStyle = "#fff"; g.lineWidth = 2.5; line(g, cx - k, cy, cx - 8, cy); line(g, cx + 8, cy, cx + k, cy); line(g, cx, cy - k, cx, cy - 8); line(g, cx, cy + 8, cx, cy + k);
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { const x = cx + sx * 60, y = cy + sy * 40; g.beginPath(); g.moveTo(x, y - sy * 10); g.lineTo(x, y); g.lineTo(x - sx * 10, y); g.stroke(); });
     // color scale
     const sx = px + pw + 14, sg = g.createLinearGradient(0, py + ph, 0, py);
     for (let i = 0; i <= 10; i++) sg.addColorStop(i / 10, this.heat(i / 10)); g.fillStyle = sg; g.fillRect(sx, py, 10, ph);
     text(g, "HI", sx + 5, py - 8, "9px 'Share Tech Mono'", "#a87a50"); text(g, "LO", sx + 5, py + ph + 8, "9px 'Share Tech Mono'", "#a87a50");
     // big number in heat color
-    const ny = py + ph + 30, col = this.heat(0.35 + norm(S.db) * 0.65), fs = Math.min(r.w * 0.26, 110);
+    const ny = py + ph + 30, col = this.heat(0.45 + norm(S.db) * 0.55), fs = Math.min(r.w * 0.3, 120);
     glow(g, col, 20); text(g, fmt(S.db, 1), w / 2, ny + fs * 0.45, `${fs}px 'Share Tech Mono'`, col); noGlow(g);
-    text(g, "dB  ·  " + status(S.db), w / 2, ny + fs * 0.98, "13px 'Share Tech Mono'", "#ffb070");
+    text(g, "dB  ·  " + status(S.db), w / 2, ny + fs * 0.98, "17px 'Share Tech Mono'", "#ffd2a0");
     const st = [["MIN", S.min], ["LEQ", S.leq], ["PEAK", S.peak], ["MAX", S.max]], bw = (r.w - 32) / 4, by = ny + fs * 1.18;
     if (by + 30 < r.y + r.h) st.forEach(([k2, v], i) => { const x = r.x + 16 + i * bw + bw / 2;
-      text(g, k2, x, by, "10px 'Share Tech Mono'", "#a87a50"); text(g, fmt(v, 1), x, by + 18, "17px 'Share Tech Mono'", this.heat(0.4 + norm(v) * 0.6)); });
+      text(g, k2, x, by, "13px 'Share Tech Mono'", "#d8a070"); text(g, fmt(v, 1), x, by + 22, "23px 'Share Tech Mono'", this.heat(0.5 + norm(v) * 0.5)); });
   } },
 
 // 10 ── CHRONOGRAPH ─────────────────────────────────────────
@@ -662,9 +663,9 @@ const themes = [
     for (let i = 0; i < 60; i++) { const a = i / 60 * TAU; g.globalAlpha = i % 5 ? 0.35 : 0.9; g.beginPath(); g.arc(x, y, R * 0.92 - (i % 5 ? 0 : 2), a, a + 0.01); g.stroke();
       line(g, x + Math.cos(a) * R * (i % 5 ? 0.86 : 0.78), y + Math.sin(a) * R * (i % 5 ? 0.86 : 0.78), x + Math.cos(a) * R * 0.92, y + Math.sin(a) * R * 0.92); }
     g.globalAlpha = 1;
-    text(g, label, x, y - R * 0.38, `600 ${R * 0.2}px Inter`, "#c9a24a");
-    text(g, fmt(v), x, y + R * 0.42, `500 ${R * 0.28}px 'Playfair Display'`, "#e8cf8e");
-    this.hand(g, x, y, -Math.PI / 2 + norm(v) * TAU, R * 0.8, 2.5, "#e8cf8e", 0.2);
+    text(g, label, x, y - R * 0.4, `700 ${R * 0.26}px Inter`, "#e8c060");
+    text(g, fmt(v), x, y + R * 0.46, `700 ${R * 0.38}px 'Playfair Display'`, "#fff1c8");
+    this.hand(g, x, y, -Math.PI / 2 + norm(v) * TAU, R * 0.8, 3.5, "#f2d68a", 0.2);
     g.fillStyle = "#c9a24a"; g.beginPath(); g.arc(x, y, 3, 0, TAU); g.fill();
   },
   draw(g, w, h, r, t, dt) {
@@ -692,19 +693,19 @@ const themes = [
     // applied indices: 0–120 dB around the dial, 10 dB per "hour"
     for (let i = 0; i < 12; i++) { const a = -Math.PI / 2 + i / 12 * TAU; if (i === 3 || i === 6 || i === 9) continue;
       g.save(); g.translate(cx + Math.cos(a) * R * 0.8, cy + Math.sin(a) * R * 0.8); g.rotate(a);
-      g.fillStyle = gold; const L = i === 0 ? R * 0.14 : R * 0.1, W = i === 0 ? R * 0.05 : R * 0.03; rrect(g, -L / 2, -W / 2, L, W, 2); g.fill(); g.restore(); }
-    text(g, "120", cx, cy - R * 0.6, `700 ${R * 0.09}px 'Playfair Display'`, "#e8cf8e");
-    text(g, "DÉCIBEL", cx, cy - R * 0.44, `500 ${R * 0.075}px 'Playfair Display'`, "#e8cf8e");
+      g.fillStyle = gold; const L = i === 0 ? R * 0.15 : R * 0.12, W = i === 0 ? R * 0.06 : R * 0.045; rrect(g, -L / 2, -W / 2, L, W, 2); g.fill(); g.restore(); }
+    text(g, "120", cx, cy - R * 0.6, `700 ${R * 0.12}px 'Playfair Display'`, "#f5dc9a");
+    text(g, "DÉCIBEL", cx, cy - R * 0.45, `700 ${R * 0.085}px 'Playfair Display'`, "#f5dc9a");
     text(g, "CHRONOMÈTRE ACOUSTIQUE", cx, cy - R * 0.35, `600 ${R * 0.035}px Inter`, "#a08040");
     // subdials 9 / 3 / 6
     const sr = R * 0.19; this.sub(g, cx - R * 0.46, cy, sr, S.min, "MIN"); this.sub(g, cx + R * 0.46, cy, sr, S.max, "MAX"); this.sub(g, cx, cy + R * 0.46, sr, S.leq, "AVG");
     // date window = live value
-    g.fillStyle = "#f3eee2"; rrect(g, cx + R * 0.52, cy + R * 0.34, R * 0.2, R * 0.12, 2); g.fill(); g.strokeStyle = gold; g.lineWidth = 2; g.stroke();
-    text(g, fmt(S.db), cx + R * 0.62, cy + R * 0.405, `700 ${R * 0.08}px Inter`, "#111");
+    g.fillStyle = "#f3eee2"; rrect(g, cx + R * 0.5, cy + R * 0.33, R * 0.24, R * 0.14, 2); g.fill(); g.strokeStyle = gold; g.lineWidth = 2; g.stroke();
+    text(g, fmt(S.db), cx + R * 0.62, cy + R * 0.405, `800 ${R * 0.1}px Inter`, "#000");
     // hands
     this.h = this.h + ((S.db == null ? 0 : norm(S.db) * 120) - this.h) * Math.min(1, dt * 6);
     const a = -Math.PI / 2 + this.h / 120 * TAU;
-    this.hand(g, cx, cy, a, R * 0.86, R * 0.045, gold, 0.18);
+    this.hand(g, cx, cy, a, R * 0.86, R * 0.06, gold, 0.18);
     // lume strip
     g.save(); g.translate(cx, cy); g.rotate(a); g.fillStyle = "rgba(220,255,230,.85)"; g.fillRect(R * 0.25, -R * 0.01, R * 0.5, R * 0.02); g.restore();
     if (S.peak != null) this.hand(g, cx, cy, -Math.PI / 2 + norm(S.peak) * TAU, R * 0.9, 1.5, "#c0281e", 0.25);
@@ -712,7 +713,7 @@ const themes = [
     // crystal
     const cr = g.createLinearGradient(cx - R, cy - R, cx, cy); cr.addColorStop(0, "rgba(255,255,255,.12)"); cr.addColorStop(1, "rgba(255,255,255,0)");
     g.fillStyle = cr; g.beginPath(); g.arc(cx, cy, R * 0.92, Math.PI, Math.PI * 1.5); g.lineTo(cx, cy); g.fill();
-    text(g, status(S.db), cx, cy + R * 1.38, `italic 500 16px 'Playfair Display'`, "#e8cf8e");
+    text(g, fmt(S.db) + " dB  ·  " + status(S.db), cx, cy + R * 1.4, `italic 700 22px 'Playfair Display'`, "#f5dc9a");
   } },
 ];
 
