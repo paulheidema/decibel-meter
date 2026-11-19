@@ -28,16 +28,18 @@
   #dots { display:flex; justify-content:center; gap:5px; margin-top:6px; }
   #dots i { width:5px; height:5px; border-radius:3px; background:var(--fg); opacity:.25; transition:all .3s; }
   #dots i.on { width:16px; opacity:.95; background:var(--accent); }
-  .icon { width:44px; height:44px; border-radius:22px; border:1px solid var(--line); background:var(--chrome);
-    color:var(--fg); display:grid; place-items:center; cursor:pointer; padding:0;
+  .icon { width:44px; height:44px; border-radius:22px; border:1.5px solid var(--line); background:rgba(10,10,12,.75);
+    color:#fff; display:grid; place-items:center; cursor:pointer; padding:0;
     -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
   .icon svg { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
   #go { flex:0 0 auto; min-width:150px; height:54px; border-radius:27px; border:0; cursor:pointer;
     font-family:var(--font); font-size:17px; font-weight:700; letter-spacing:3px; text-transform:uppercase;
-    background:var(--accent); color:var(--btnfg); box-shadow:0 0 24px color-mix(in srgb, var(--accent) 45%, transparent);
+    background:#0b0b0d; color:#fff; border:3px solid var(--accent); text-shadow:0 1px 2px #000;
+    box-shadow:0 0 22px color-mix(in srgb, var(--accent) 55%, transparent);
     transition:transform .15s, background .4s; }
   #go:active { transform:scale(.96); }
-  #go.live { background:transparent; color:var(--accent); border:2px solid var(--accent); }
+  #go.live { background:#0b0b0d; color:#fff; border:3px solid #ff3b4e; box-shadow:0 0 22px rgba(255,59,78,.55); }
+  #go.live::before { content:""; display:inline-block; width:10px; height:10px; border-radius:5px; background:#ff3b4e; margin-right:10px; vertical-align:1px; }
   #sheet { position:fixed; left:0; right:0; bottom:0; z-index:5; padding:22px 20px calc(env(safe-area-inset-bottom) + 22px);
     background:rgba(18,18,20,.92); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
     color:#eee; font-family:-apple-system, Inter, sans-serif; border-radius:22px 22px 0 0;
@@ -53,7 +55,7 @@
   .seg button { flex:1; border:0; background:none; color:#ccc; padding:8px; border-radius:8px; font:inherit; cursor:pointer; }
   .seg button.on { background:#4a4a52; color:#fff; font-weight:600; }
   .note { font-size:12px; color:#888; line-height:1.5; margin:12px 0 0; }
-  .themes { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:6px; }
+  .themes { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-top:6px; }
   .themes button { aspect-ratio:1; border-radius:12px; border:2px solid transparent; cursor:pointer; padding:0; font-size:10px; color:#fff; font-weight:600; }
   .themes button.on { border-color:#fff; }
   #err { position:fixed; left:20px; right:20px; top:40%; z-index:6; padding:16px; border-radius:14px; display:none;
@@ -269,18 +271,18 @@ const themes = [
     glow(g, red, 18);
     text(g, fmt(S.db), cx, cy - R * 0.04, `700 ${R * 0.8}px Rajdhani`, "#fff");
     noGlow(g);
-    text(g, "dB SPL", cx, cy + R * 0.42, "700 20px Rajdhani", red);
+    text(g, "dB SPL", cx, cy + R * 0.42, "700 20px Rajdhani", "#ff8a92");
     // status
     const alert = S.db != null && S.db >= 85, blink = !alert || Math.floor(t * 3) % 2;
     const sy = cy + R * 1.18;
     g.strokeStyle = red; g.lineWidth = 2.5; rrect(g, cx - 130, sy - 19, 260, 38, 3); g.stroke();
     if (alert && blink) { g.fillStyle = "rgba(255,43,58,.25)"; g.fill(); }
-    text(g, "STATUS: " + (S.db == null ? "STANDBY" : S.db < 70 ? "NOMINAL" : S.db < 85 ? "ELEVATED" : "BREACH"), cx, sy + 1, "700 21px Rajdhani", blink ? (alert ? "#fff" : red) : "#600");
+    text(g, "STATUS: " + (S.db == null ? "STANDBY" : S.db < 70 ? "NOMINAL" : S.db < 85 ? "ELEVATED" : "BREACH"), cx, sy + 1, "700 21px Rajdhani", alert ? (blink ? "#fff" : "#ff8a92") : "#ff6b74");
     // stats
     const st = [["PEAK", S.peak], ["MIN", S.min], ["LEQ", S.leq], ["MAX", S.max]], bw = (r.w - 48) / 4, by = sy + 30;
     st.forEach(([k, v], i) => { const x = r.x + 24 + i * bw;
       g.strokeStyle = "rgba(255,43,58,.7)"; g.lineWidth = 1.5; g.strokeRect(x + 3, by, bw - 6, 56);
-      text(g, k, x + bw / 2, by + 13, "700 13px Rajdhani", red);
+      text(g, k, x + bw / 2, by + 13, "700 13px Rajdhani", "#ffa3a9");
       text(g, fmt(v, 1), x + bw / 2, by + 38, "700 26px Rajdhani", "#fff"); });
     // oscilloscope
     const oy = by + 72, oh = Math.max(30, r.y + r.h - oy - 8);
@@ -292,6 +294,55 @@ const themes = [
     // sweep
     const sx = (t * 0.25 % 1) * w; const gr = g.createLinearGradient(sx - 60, 0, sx, 0);
     gr.addColorStop(0, "rgba(255,43,58,0)"); gr.addColorStop(1, "rgba(255,43,58,.08)"); g.fillStyle = gr; g.fillRect(sx - 60, 0, 60, h);
+  } },
+
+// 2 ── LED LADDER ─────────────────────────────────────────
+{ name: "LED Ladder", tag: "Big segmented level meter", swatch: "#2fe06a",
+  ui: { fg: "#eafff0", chrome: "rgba(0,0,0,.5)", accent: "#2fe06a", btnfg: "#fff", font: "Rajdhani, sans-serif", line: "rgba(255,255,255,.25)" },
+  reset() { this.hold = null; this.holdT = 0; }, init() { this.reset(); },
+  draw(g, w, h, r, t) {
+    const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, "#15181c"); bg.addColorStop(1, "#08090b");
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    const segCol = d => d < 70 ? [47, 224, 106] : d < 85 ? [255, 206, 46] : [255, 52, 64];
+    // big readout panel
+    const px = r.x + 16, pw = r.w - 32, ph = 116, py = r.y + 6;
+    g.fillStyle = "#050607"; rrect(g, px, py, pw, ph, 16); g.fill(); g.strokeStyle = "#2a2f36"; g.lineWidth = 2; g.stroke();
+    const col = S.db == null ? "#fff" : `rgb(${segCol(S.db).join(",")})`;
+    text(g, fmt(S.db, 1), px + 22, py + ph / 2 + 4, `700 ${Math.min(96, pw * 0.27)}px Rajdhani`, "#ffffff", "left");
+    text(g, "dB", px + pw - 22, py + 40, "700 26px Rajdhani", "#cfd6de", "right");
+    g.fillStyle = col; rrect(g, px + pw - 22 - 120, py + ph - 44, 120, 30, 15); g.fill();
+    g.fillStyle = "rgba(0,0,0,.55)"; rrect(g, px + pw - 22 - 118, py + ph - 42, 116, 26, 13); g.fill();
+    text(g, status(S.db), px + pw - 22 - 60, py + ph - 28, "700 13px Rajdhani", "#ffffff");
+    // ladder
+    const N = 25, top = py + ph + 22, bottom = r.y + r.h - 96, H = bottom - top, gap = 4, sh = (H - gap * (N - 1)) / N;
+    const lx = px + 54, lw = pw - 54 - 112;
+    if (this.hold == null || (S.db != null && S.db > this.hold) || t - this.holdT > 2.5) { this.hold = S.db; this.holdT = t; }
+    const lit = Math.round(norm(S.db) * N), hold = Math.round(norm(this.hold) * N);
+    for (let i = 0; i < N; i++) {
+      const d = MIN_DB + (i + 0.5) / N * (MAX_DB - MIN_DB), [cr, cg, cb] = segCol(d), y = bottom - (i + 1) * sh - i * gap;
+      const on = i < lit, pk = i === hold - 1 && i >= lit;
+      g.fillStyle = on || pk ? `rgb(${cr},${cg},${cb})` : `rgba(${cr},${cg},${cb},.13)`;
+      if (on || pk) glow(g, `rgb(${cr},${cg},${cb})`, 16);
+      rrect(g, lx, y, lw, sh, Math.min(6, sh / 2)); g.fill(); noGlow(g);
+      if (on) { g.fillStyle = "rgba(255,255,255,.22)"; rrect(g, lx + 4, y + 2, lw - 8, Math.max(1, sh * 0.28), 3); g.fill(); }
+    }
+    // scale
+    for (let d = 20; d <= 120; d += 10) { const y = bottom - norm(d) * H;
+      g.strokeStyle = "#8a939e"; g.lineWidth = 2; line(g, lx - 12, y, lx - 4, y);
+      text(g, String(d), lx - 16, y, "700 15px Rajdhani", "#e6ebf0", "right"); }
+    // side stats
+    const sx = lx + lw + 14, sw = px + pw - sx, st = [["PEAK", S.peak], ["MAX", S.max], ["AVG", S.leq], ["MIN", S.min]], bh = Math.min(70, (H - 30) / 4);
+    st.forEach(([k, v], i) => { const y = top + i * (bh + 10);
+      g.fillStyle = "#050607"; rrect(g, sx, y, sw, bh, 12); g.fill(); g.strokeStyle = "#2a2f36"; g.lineWidth = 2; g.stroke();
+      text(g, k, sx + sw / 2, y + bh * 0.3, "700 13px Rajdhani", "#aab4bf");
+      text(g, fmt(v, 1), sx + sw / 2, y + bh * 0.66, "700 26px Rajdhani", "#ffffff"); });
+    // timeline strip
+    const ty = bottom + 18, tH = 54;
+    g.fillStyle = "#050607"; rrect(g, px, ty, pw, tH, 12); g.fill(); g.strokeStyle = "#2a2f36"; g.stroke();
+    const bars = 60, bw = (pw - 20) / bars;
+    for (let i = 0; i < bars; i++) { const idx = S.hist.length - bars * 5 + i * 5; if (idx < 0) continue;
+      const v = S.hist[idx], bhh = Math.max(2, norm(v) * (tH - 16)); g.fillStyle = `rgb(${segCol(v).join(",")})`;
+      g.fillRect(px + 10 + i * bw, ty + tH - 8 - bhh, Math.max(1, bw - 2), bhh); }
   } },
 
 // 2 ── HOLOGRAM ─────────────────────────────────────────
@@ -399,10 +450,9 @@ const themes = [
     // engraved plates
     const st = [["MIN", S.min], ["LEQ", S.leq], ["MAX", S.max]], pw = Math.min(116, (r.w - 40) / 3), sy = ry + 92;
     st.forEach(([k, v], i) => { const x = w / 2 + (i - 1) * (pw + 8) - pw / 2;
-      const pg = g.createLinearGradient(0, sy, 0, sy + 54); pg.addColorStop(0, "#c9a85c"); pg.addColorStop(1, "#8a6a2c");
-      g.fillStyle = pg; rrect(g, x, sy, pw, 62, 6); g.fill();
-      text(g, k, x + pw / 2, sy + 16, "700 12px Inter", "#2a1a06");
-      text(g, fmt(v, 1), x + pw / 2, sy + 41, "700 26px 'Playfair Display'", "#140c04"); });
+      g.fillStyle = "#120a04"; rrect(g, x, sy, pw, 62, 8); g.fill(); g.strokeStyle = "#c9a24a"; g.lineWidth = 2; g.stroke();
+      text(g, k, x + pw / 2, sy + 16, "700 12px Inter", "#e8c46a");
+      text(g, fmt(v, 1), x + pw / 2, sy + 41, "700 26px 'Playfair Display'", "#fff3d6"); });
   } },
 
 // 4 ── TERMINAL ─────────────────────────────────────────
@@ -573,8 +623,9 @@ const themes = [
     // master caution
     const warn = S.db != null && S.db >= 85, on = warn && Math.floor(t * 2.5) % 2;
     const wx = r.x + r.w - 86, wy = r.y + 2;
-    g.fillStyle = on ? "#ffb000" : "#3a2c08"; rrect(g, wx - 10, wy - 2, 80, 30, 4); g.fill();
-    text(g, "CAUTION", wx + 35, wy + 14, "700 15px Rajdhani", on ? "#111" : "#9a7a22");
+    g.fillStyle = on ? "#5a1a00" : "#221a08"; rrect(g, wx - 10, wy - 2, 80, 30, 4); g.fill();
+    g.strokeStyle = on ? "#ffb000" : "#6a5418"; g.lineWidth = 2; g.stroke(); if (on) glow(g, "#ffb000", 14);
+    text(g, "CAUTION", wx + 30, wy + 14, "700 15px Rajdhani", on ? "#ffe9a8" : "#b09040"); noGlow(g);
     text(g, "T " + clock(S.elapsed), r.x + 16, wy + 14, "700 16px 'Share Tech Mono'", "#cdd", "left");
   } },
 
@@ -639,7 +690,7 @@ const themes = [
     // color scale
     const sx = px + pw + 14, sg = g.createLinearGradient(0, py + ph, 0, py);
     for (let i = 0; i <= 10; i++) sg.addColorStop(i / 10, this.heat(i / 10)); g.fillStyle = sg; g.fillRect(sx, py, 10, ph);
-    text(g, "HI", sx + 5, py - 8, "9px 'Share Tech Mono'", "#a87a50"); text(g, "LO", sx + 5, py + ph + 8, "9px 'Share Tech Mono'", "#a87a50");
+    text(g, "HI", sx + 5, py - 8, "11px 'Share Tech Mono'", "#ffd2a0"); text(g, "LO", sx + 5, py + ph + 8, "11px 'Share Tech Mono'", "#ffd2a0");
     // big number in heat color
     const ny = py + ph + 30, col = this.heat(0.45 + norm(S.db) * 0.55), fs = Math.min(r.w * 0.3, 120);
     glow(g, col, 20); text(g, fmt(S.db, 1), w / 2, ny + fs * 0.45, `${fs}px 'Share Tech Mono'`, col); noGlow(g);
@@ -734,7 +785,7 @@ function setTheme(i) {
   $("tname").textContent = th.name; $("ttag").textContent = th.tag;
   $("dots").innerHTML = themes.map((_, k) => `<i class="${k === cur ? "on" : ""}"></i>`).join("");
   [...$("themeGrid").children].forEach((b, k) => b.classList.toggle("on", k === cur));
-  document.querySelector('meta[name=theme-color]').content = cur === 5 || cur === 7 ? "#f2ecda" : "#000";
+  document.querySelector('meta[name=theme-color]').content = themes[cur].name === "Pure" || themes[cur].name === "Seismograph" ? "#f2ecda" : "#000";
 }
 function layoutRect() {
   const tb = $("top").getBoundingClientRect().bottom, bb = $("bot").getBoundingClientRect().top;
@@ -765,7 +816,7 @@ addEventListener("keydown", e => { if (e.key === "ArrowRight") go(1); if (e.key 
 // settings
 $("gear").onclick = () => $("sheet").classList.add("open");
 $("close").onclick = () => $("sheet").classList.remove("open");
-$("themeGrid").innerHTML = themes.map((th, k) => `<button style="background:${th.swatch};color:${["#f2f2ef", "#efe7d2", "#33ff77", "#29e6ff", "#e8c46a"].includes(th.swatch) ? "#111" : "#fff"}" data-k="${k}">${k + 1}</button>`).join("");
+$("themeGrid").innerHTML = themes.map((th, k) => `<button style="background:${th.swatch};color:${["#f2f2ef", "#efe7d2", "#33ff77", "#29e6ff", "#e8c46a", "#2fe06a"].includes(th.swatch) ? "#111" : "#fff"}" data-k="${k}">${k + 1}</button>`).join("");
 $("themeGrid").onclick = e => { const k = e.target.dataset.k; if (k != null) { fade = 0.6; setTheme(+k); } };
 $("offset").value = S.offset; $("offv").textContent = "+" + S.offset;
 $("offset").oninput = e => { S.offset = +e.target.value; $("offv").textContent = "+" + S.offset; store.set("offset", S.offset); };
